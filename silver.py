@@ -35,3 +35,89 @@ print(customers.duplicated().sum())
 
 print("\nCustomer ID duplicados:")
 print(customers["customer_id"].duplicated().sum())
+
+
+
+
+
+
+
+import pandas as pd
+import pyodbc
+
+# Conexión a SQL Server
+conn = pyodbc.connect(
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "SERVER=localhost;"
+    "DATABASE=olist;"
+    "Trusted_Connection=yes;"
+    "TrustServerCertificate=yes;"
+)
+
+# Nombres reales de las tablas en SQL Server
+tablas = [
+    "Sellers",
+    "Productos",
+    "nametranslation",
+    "geolocation",
+    "orders",
+    "orderItems",
+    "payments",
+    "reviews"
+]
+
+# Diccionario para guardar los DataFrames
+datos = {}
+
+# Recorrer todas las tablas
+for nombre in tablas:
+
+    print("\n" + "=" * 50)
+    print("DIAGNÓSTICO DE:", nombre)
+    print("=" * 50)
+
+    # Consultar SQL Server
+    query = f"SELECT * FROM dbo.[{nombre}]"
+
+    df = pd.read_sql(query, conn)
+
+    # Guardar tabla
+    datos[nombre] = df
+
+    # Cantidad de filas y columnas
+    print("\nFilas y columnas:")
+    print(df.shape)
+
+    # Tipos de datos
+    print("\nTipos de datos:")
+    print(df.dtypes)
+
+    # Valores nulos
+    print("\nValores nulos por columna:")
+    print(df.isna().sum())
+
+    # Filas completamente duplicadas
+    print("\nFilas duplicadas:")
+    print(df.duplicated().sum())
+
+    # Nombres de columnas
+    print("\nColumnas disponibles:")
+    print(df.columns.tolist())
+
+# Cerrar conexión
+conn.close()
+
+print("\nDIAGNÓSTICO FINALIZADO")
+
+
+
+
+
+
+
+
+
+
+
+
+
