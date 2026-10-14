@@ -36,3 +36,11 @@ Sebastian Barzuna Garza.
 
 ### Archivos incluidos
 silver.py 
+
+## Versión 0.3
+### Diagnóstico de las tablas 
+**Fecha:** 2026-10-13
+**Resumen:** Se hace un Diagnóstico de todas las tablas de la base de datos de Olist.
+
+### Novedades 
+hacemos copia de todas las tablas para iniciar con la limpieza de datos.

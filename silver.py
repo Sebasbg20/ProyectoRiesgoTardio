@@ -112,6 +112,18 @@ print("\nDIAGNÓSTICO FINALIZADO")
 
 
 
+# Crear copias para Silver
+silver = {}
+
+for nombre, df in datos.items():
+    silver[nombre] = df.copy()
+
+# Agregar customers, que cargaste por separado
+silver["customers"] = customers.copy()
+
+print("Tablas preparadas para Silver:")
+print(list(silver.keys()))
+
 
 
 
