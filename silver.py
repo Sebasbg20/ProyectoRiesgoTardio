@@ -59,7 +59,7 @@ tablas = [
     "sellers",
     "products",
     "nametranslation",
-    "geolocation",
+    
     "orders",
     "orderitems",
     "payments",
@@ -103,6 +103,51 @@ for nombre in tablas:
     # Nombres de columnas
     print("\nColumnas disponibles:")
     print(df.columns.tolist())
+
+    # ==========================================
+# SILVER - GEOLOCATION
+# ==========================================
+
+print("\nPROCESANDO GEOLOCATION PARA SILVER")
+
+consulta_geo = """
+WITH coordenadas AS (
+    SELECT
+        geolocation_zip_code_prefix,
+        TRY_CONVERT(FLOAT, geolocation_lat) AS lat,
+        TRY_CONVERT(FLOAT, geolocation_lng) AS lng
+    FROM dbo.geolocation
+)
+SELECT
+    geolocation_zip_code_prefix,
+    AVG(lat) AS latitud,
+    AVG(lng) AS longitud,
+    COUNT(*) AS cantidad
+FROM coordenadas
+WHERE lat BETWEEN -34 AND 6
+  AND lng BETWEEN -74 AND -28
+GROUP BY geolocation_zip_code_prefix
+"""
+
+geo_silver = pd.read_sql(consulta_geo, conn)
+
+geo_silver["geolocation_zip_code_prefix"] = (
+    geo_silver["geolocation_zip_code_prefix"]
+    .astype(str)
+    .str.zfill(5)
+)
+
+print("Codigos postales:", len(geo_silver))
+
+print(
+    "Duplicados:",
+    geo_silver["geolocation_zip_code_prefix"].duplicated().sum()
+)
+
+# Incorporar al diccionario de datos
+datos["geolocation"] = geo_silver
+
+print("GEOLOCATION INCORPORADA CORRECTAMENTE")
 
 # Cerrar conexión
 conn.close()
@@ -1153,3 +1198,4 @@ print("Diferencia maxima:",
 
 print("Diferencia minima:",
       verificacion["diferencia"].min())
+
