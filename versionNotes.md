@@ -68,3 +68,29 @@ hacemos copia de todas las tablas para iniciar con la limpieza de datos.
 ### Archivos incluidos
 - silver.py
 - versionNotes.md
+
+## Versión 0.5
+
+### Validación e integración de datos geolocation, reviews y nametranslation
+
+**Fecha:** 2026-10-19
+
+**Resumen:** Se realizan validaciones de calidad de las tablas geolocation, reviews y nametranslation. Se integra el procesamiento geográfico al archivo principal silver.py como parte de la preparación de la capa Silver.
+
+### Novedades
+
+- Se analizan 1.000.163 registros de geolocation y se identifican 19.015 prefijos postales distintos.
+- Se detectan 31 registros con coordenadas fuera del rango geográfico aproximado utilizado para Brasil.
+- Se aplica una transformación que agrupa coordenadas por prefijo postal y calcula latitud y longitud promedio.
+- Se obtienen 19.011 prefijos postales en Silver, sin duplicados.
+- Se normalizan los prefijos postales a cinco caracteres.
+- Se integra el procesamiento de geolocation en silver.py, evitando su carga completa mediante la lista general de tablas.
+- Se analizan 99.224 registros de reviews y se identifican 789 identificadores review_id repetidos.
+- Se comprueba que no existen combinaciones duplicadas de review_id y order_id.
+- Se verifican valores nulos y puntuaciones de reviews, sin encontrar anomalías en los campos revisados.
+- Se conservan los registros de reviews sin eliminar identificadores repetidos automáticamente.
+- Se valida nametranslation con 71 registros, sin valores nulos ni filas completamente duplicadas.
+- Se ejecuta silver.py sin errores visibles después de integrar geolocation.
+- Se mantienen intactos los datos originales de Bronze.
+- Queda pendiente completar la capa Silver y comprobar la compatibilidad de los datos geográficos resumidos con las siguientes etapas del proyecto.
+
