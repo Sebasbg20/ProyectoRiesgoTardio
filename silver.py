@@ -54,30 +54,29 @@ conn = pyodbc.connect(
     "TrustServerCertificate=yes;"
 )
 
-# Nombres reales de las tablas en SQL Server
-tablas = [
-    "sellers",
-    "products",
-    "nametranslation",
-    
-    "orders",
-    "orderitems",
-    "payments",
-    "reviews"
-]
+# Claves lógicas de Silver y nombres reales de las tablas en SQL Server
+tablas = {
+    "sellers": "sellers",
+    "products": "Productos",
+    "nametranslation": "nametranslation",
+    "orders": "orders",
+    "orderitems": "orderitems",
+    "payments": "payments",
+    "reviews": "reviews",
+}
 
 # Diccionario para guardar los DataFrames
 datos = {}
 
 # Recorrer todas las tablas
-for nombre in tablas:
+for nombre, tabla_sql in tablas.items():
 
     print("\n" + "=" * 50)
     print("DIAGNÓSTICO DE:", nombre)
     print("=" * 50)
 
     # Consultar SQL Server
-    query = f"SELECT * FROM dbo.[{nombre}]"
+    query = f"SELECT * FROM dbo.[{tabla_sql}]"
 
     df = pd.read_sql(query, conn)
 
@@ -1198,4 +1197,3 @@ print("Diferencia maxima:",
 
 print("Diferencia minima:",
       verificacion["diferencia"].min())
-

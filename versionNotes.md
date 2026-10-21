@@ -94,3 +94,25 @@ hacemos copia de todas las tablas para iniciar con la limpieza de datos.
 - Se mantienen intactos los datos originales de Bronze.
 - Queda pendiente completar la capa Silver y comprobar la compatibilidad de los datos geográficos resumidos con las siguientes etapas del proyecto.
 
+## Versión 0.6
+
+### Construcción de la capa Gold
+
+**Fecha:** 2026-10-20
+
+**Resumen:** Se construye la tabla analítica Gold order_delivery_risk_features con una fila por order_id.
+
+### Novedades
+
+- Se integran orders, orderitems, products, sellers, customers y geolocation en una sola tabla.
+- Se resumen los artículos por pedido y se toma como artículo principal el de mayor precio para definir la categoría y el vendedor.
+- Se construye la variable objetivo late_delivery (1 si order_delivered_customer_date es posterior a order_estimated_delivery_date). Los pedidos sin fecha de entrega quedan fuera de la tabla Gold.
+- Se crean las variables: cantidad de ítems, cantidad de vendedores, valor total, freight_value, peso y volumen totales, categoría principal, estado de origen y destino, distancia vendedor-cliente, día de la semana y mes de compra, días estimados de entrega y mismo estado.
+- Se excluyen order_status y las fechas de entrega para evitar fuga de datos.
+- Se conserva order_purchase_timestamp solo para dividir los datos por tiempo.
+- Se agregan controles de filas en cada unión, order_id duplicados, valores faltantes y distribución de late_delivery.
+- Se modifica la conexión de la base de datos en silver.py para transcribir la tabla [products] a [productos]
+
+### Archivos incluidos
+- gold_order_delivery_risk_features.py
+- versionNotes.md
