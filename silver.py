@@ -205,6 +205,21 @@ print("Total de clientes en Silver:", len(silver["customers"]))
 print("Codigos postales de ejemplo:")
 print(silver["customers"]["customer_zip_code_prefix"].head())
 
+# Validar correspondencia de codigos postales entre customers y geolocation
+
+codigos_geo = set(
+    silver["geolocation"]["geolocation_zip_code_prefix"]
+)
+
+clientes_con_geo = silver["customers"][
+    "customer_zip_code_prefix"
+].isin(codigos_geo)
+
+print("\nVALIDACION GEOGRAFICA DE CLIENTES")
+print("Total de clientes:", len(silver["customers"]))
+print("Clientes con codigo postal encontrado:", clientes_con_geo.sum())
+print("Clientes sin codigo postal encontrado:", (~clientes_con_geo).sum())
+
 # Preparar vendedores para la capa Silver
 sellers_silver = silver["sellers"].copy()
 
@@ -224,6 +239,17 @@ print("Total:", len(silver["sellers"]))
 print("Codigos postales:")
 print(silver["sellers"]["seller_zip_code_prefix"].head())
 
+
+# Validar correspondencia de codigos postales entre sellers y geolocation
+
+vendedores_con_geo = silver["sellers"][
+    "seller_zip_code_prefix"
+].isin(codigos_geo)
+
+print("\nVALIDACION GEOGRAFICA DE VENDEDORES")
+print("Total de vendedores:", len(silver["sellers"]))
+print("Vendedores con codigo postal encontrado:", vendedores_con_geo.sum())
+print("Vendedores sin codigo postal encontrado:", (~vendedores_con_geo).sum())
 
 # Revisar productos antes de limpiar
 products_silver = silver["products"].copy()
@@ -704,7 +730,26 @@ print(silver["orders"].columns.tolist())
 print("\nDIMENSIONES DE ORDERS:")
 print(silver["orders"].shape)
 
+print("\nTIPOS DE DATOS DE ORDERS:")
+print(silver["orders"].dtypes)
 
+# Validar fechas estimadas de entrega
+orders = silver["orders"]
+
+sin_fecha_estimada = orders["order_estimated_delivery_date"].isna().sum()
+
+fecha_estimada_anterior_compra = (
+    orders["order_estimated_delivery_date"].notna()
+    & orders["order_purchase_timestamp"].notna()
+    & (
+        orders["order_estimated_delivery_date"]
+        < orders["order_purchase_timestamp"]
+    )
+).sum()
+
+print("\nVALIDACION DE FECHA ESTIMADA")
+print("Pedidos sin fecha estimada:", sin_fecha_estimada)
+print("Fecha estimada anterior a la compra:", fecha_estimada_anterior_compra)
 
 print("\nREVISION DE ORDERITEMS:")
 
