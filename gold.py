@@ -294,3 +294,6 @@ print(
     "-",
     gold["order_delivery_risk_features"]["order_purchase_timestamp"].max()
 )
+
+print("\nCOLUMNAS DISPONIBLES PARA EL MODELO:")
+print(gold["order_delivery_risk_features"].columns.tolist()) 
