@@ -1242,3 +1242,5 @@ print("Diferencia maxima:",
 
 print("Diferencia minima:",
       verificacion["diferencia"].min())
+
+
