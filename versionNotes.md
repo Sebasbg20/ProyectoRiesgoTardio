@@ -116,3 +116,25 @@ hacemos copia de todas las tablas para iniciar con la limpieza de datos.
 ### Archivos incluidos
 - gold_order_delivery_risk_features.py
 - versionNotes.md
+
+### Versión 0.7 — Validación de archivos originales de Bronze
+**Fecha:** 26 de octubre de 2026
+
+**Actividad realizada:**
+
+Se creó el archivo `bronze.py` para verificar los archivos CSV originales del dataset Olist.
+
+Se comprobaron los nombres de los archivos, la cantidad de registros y el número de columnas.
+
+**Resultados:**
+- Se identificaron nueve archivos CSV.
+- Ocho archivos presentan la misma cantidad de registros que sus respectivas tablas en SQL Server.
+- Se detectó una diferencia en `nametranslation`: el CSV contiene 71 registros y SQL Server contiene 72.
+- Mediante una consulta SQL se confirmó que la fila adicional corresponde a los encabezados del archivo CSV, importados como datos.
+
+**Decisión tomada:**
+
+Se conservará la tabla original de Bronze sin modificaciones. La fila correspondiente a los encabezados se excluirá durante la preparación de Silver.
+
+**Estado:** Validación inicial completada. Pendiente automatizar la carga reproducible y registrar la trazabilidad.
+
