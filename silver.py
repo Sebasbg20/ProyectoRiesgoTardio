@@ -57,7 +57,7 @@ conn = pyodbc.connect(
 # Claves lógicas de Silver y nombres reales de las tablas en SQL Server
 tablas = {
     "sellers": "sellers",
-    "products": "products",
+    "products": "Productos",
     "nametranslation": "nametranslation",
     "orders": "orders",
     "orderitems": "orderitems",
