@@ -174,3 +174,15 @@ Se conservará la tabla original de Bronze sin modificaciones. La fila correspon
 - En la prueba temporal, con ese umbral, se obtuvo precision 0,0982, recall 0,3673, F1 0,1550, PR-AUC 0,1053 y ROC-AUC 0,7127. Con umbral 0,50, F1 fue 0,1585; por tanto, el umbral escogido en validación no mejoró F1 en la prueba y el resultado debe interpretarse como evidencia de generalización limitada.
 - En la interpretación por permutación, `dias_estimados_entrega` mostró la mayor caída media de PR-AUC (0,05851) en 5.000 pedidos de prueba.
 - El CSV contiene 19.296 pedidos ordenados por probabilidad; 3.819 superan el umbral de 0,65.
+
+## Versión 1.0 — Persistencia y control de granularidad de Gold
+**Fecha:** 27 de octubre de 2026
+
+### Cambios
+- `gold.py` conserva la tabla analítica en memoria y además la exporta como CSV reutilizable a `outputs/gold_order_delivery_risk_features.csv`.
+- Las uniones con products, sellers, customers y geolocation ahora declaran cardinalidad muchos-a-uno. Se comprueba que no aumenten las filas de orders ni dupliquen `order_id`.
+- Antes y después de exportar se verifica que haya exactamente una fila por `order_id`; el CSV se vuelve a leer para comprobar que conserva los identificadores, su orden y cantidad.
+
+### Resultados de la ejecución
+- Gold generó 96.476 filas y 17 columnas, con 96.476 `order_id` únicos, cero nulos y cero duplicados.
+- La lectura de comprobación del CSV confirmó los 96.476 identificadores únicos y el mismo orden del DataFrame Gold.

@@ -1,4 +1,6 @@
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -18,7 +20,8 @@ items = silver["orderitems"].merge(
         ]
     ],
     on="product_id",
-    how="left"
+    how="left",
+    validate="many_to_one",
 )
 
 items = items.merge(
@@ -30,7 +33,8 @@ items = items.merge(
         ]
     ],
     on="seller_id",
-    how="left"
+    how="left",
+    validate="many_to_one",
 )
 
 # Volumen de cada articulo en cm3
@@ -94,6 +98,9 @@ base = silver["orders"][
         "order_delivered_customer_date"
     ]
 ].copy()
+pedidos_silver = len(base)
+if base["order_id"].duplicated().any():
+    raise ValueError("Silver orders contiene order_id duplicados.")
 
 base = base.merge(
     silver["customers"][
@@ -107,22 +114,30 @@ base = base.merge(
         "customer_state": "estado_destino"
     }),
     on="customer_id",
-    how="left"
+    how="left",
+    validate="many_to_one",
 )
 
 base = base.merge(
     resumen_items,
     left_on="order_id",
     right_index=True,
-    how="left"
+    how="left",
+    validate="many_to_one",
 )
 
 base = base.merge(
     item_principal,
     left_on="order_id",
     right_index=True,
-    how="left"
+    how="left",
+    validate="many_to_one",
 )
+if len(base) != pedidos_silver or base["order_id"].duplicated().any():
+    raise ValueError(
+        "Las uniones de customers y orderitems alteraron la granularidad "
+        "de orders."
+    )
 
 print("Pedidos en Silver:", len(silver["orders"]))
 print("Pedidos despues de integrar:", len(base))
@@ -146,7 +161,8 @@ base = base.merge(
         "longitud": "lng_vendedor"
     }),
     on="zip_vendedor",
-    how="left"
+    how="left",
+    validate="many_to_one",
 )
 
 base = base.merge(
@@ -156,10 +172,15 @@ base = base.merge(
         "longitud": "lng_cliente"
     }),
     on="zip_cliente",
-    how="left"
+    how="left",
+    validate="many_to_one",
 )
 
 print("Pedidos despues de integrar geolocation:", len(base))
+if len(base) != pedidos_silver or base["order_id"].duplicated().any():
+    raise ValueError(
+        "Las uniones de geolocation alteraron la granularidad de orders."
+    )
 
 # Distancia aproximada en kilometros (formula de Haversine)
 lat_v = np.radians(base["lat_vendedor"])
@@ -267,11 +288,44 @@ gold["order_delivery_risk_features"]["late_delivery"] = (
     gold["order_delivery_risk_features"]["late_delivery"].astype(int)
 )
 
+tabla_gold = gold["order_delivery_risk_features"]
+duplicados_gold = int(tabla_gold["order_id"].duplicated().sum())
+if duplicados_gold:
+    raise ValueError(
+        "Gold debe tener una fila por order_id; "
+        f"se encontraron {duplicados_gold} duplicados."
+    )
+
+carpeta_salida = Path(__file__).resolve().parent / "outputs"
+carpeta_salida.mkdir(parents=True, exist_ok=True)
+archivo_gold = carpeta_salida / "gold_order_delivery_risk_features.csv"
+tabla_gold.to_csv(archivo_gold, index=False, encoding="utf-8-sig")
+ids_exportados = pd.read_csv(
+    archivo_gold,
+    usecols=["order_id"],
+    dtype={"order_id": "string"},
+)["order_id"]
+ids_gold = tabla_gold["order_id"].astype("string").reset_index(drop=True)
+if (
+    len(ids_exportados) != len(tabla_gold)
+    or ids_exportados.duplicated().any()
+    or not ids_exportados.equals(ids_gold)
+):
+    raise IOError(
+        "La tabla Gold exportada no conserva la cantidad, unicidad "
+        "o el orden de order_id."
+    )
+
 print("Filas y columnas:")
-print(gold["order_delivery_risk_features"].shape)
+print(tabla_gold.shape)
 
 print("\nGranularidad: order_id duplicados:")
-print(gold["order_delivery_risk_features"]["order_id"].duplicated().sum())
+print(duplicados_gold)
+
+print("\nPersistencia de Gold:")
+print("Archivo:", archivo_gold)
+print("Filas exportadas:", len(tabla_gold))
+print("order_id unicos despues de exportar:", ids_exportados.nunique())
 
 print("\nValores faltantes:")
 print(gold["order_delivery_risk_features"].isna().sum())
