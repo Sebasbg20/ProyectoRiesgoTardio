@@ -1,4 +1,5 @@
  
+
 import pandas as pd
 import pyodbc
  
@@ -1318,7 +1319,3 @@ print("Diferencia maxima:",
  
 print("Diferencia minima:",
       verificacion["diferencia"].min())
- 
- 
- 
- 
