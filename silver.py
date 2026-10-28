@@ -1,7 +1,119 @@
  
 
+import hashlib
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 import pyodbc
+
+
+def persistir_silver_curated(tablas, carpeta_salida):
+    carpeta_salida.mkdir(parents=True, exist_ok=True)
+    fecha_generacion = datetime.now().astimezone().isoformat()
+    archivos_temporales = []
+    tablas_recargadas = {}
+    registros_manifiesto = []
+
+    try:
+        for nombre, tabla in tablas.items():
+            archivo = carpeta_salida / f"silver_{nombre}.csv"
+            temporal = carpeta_salida / f".silver_{nombre}.csv.tmp"
+            archivos_temporales.append((temporal, archivo))
+
+            tabla.to_csv(temporal, index=False, encoding="utf-8-sig")
+
+            columnas_texto = [
+                columna
+                for columna in tabla.columns
+                if pd.api.types.is_object_dtype(tabla[columna].dtype)
+                or pd.api.types.is_string_dtype(tabla[columna].dtype)
+            ]
+            columnas_booleanas = [
+                columna
+                for columna in tabla.columns
+                if pd.api.types.is_bool_dtype(tabla[columna].dtype)
+            ]
+            columnas_fecha = [
+                columna
+                for columna in tabla.columns
+                if pd.api.types.is_datetime64_any_dtype(tabla[columna].dtype)
+            ]
+
+            tabla_recargada = pd.read_csv(
+                temporal,
+                dtype={
+                    **{columna: object for columna in columnas_texto},
+                    **{columna: "bool" for columna in columnas_booleanas},
+                },
+                parse_dates=columnas_fecha,
+                low_memory=False,
+            )
+            if (
+                len(tabla_recargada) != len(tabla)
+                or tabla_recargada.columns.tolist() != tabla.columns.tolist()
+            ):
+                raise ValueError(
+                    f"La lectura de comprobación no coincide para Silver "
+                    f"{nombre}."
+                )
+
+            if nombre == "geolocation":
+                prefijos = tabla_recargada[
+                    "geolocation_zip_code_prefix"
+                ]
+                if not prefijos.str.len().eq(5).all():
+                    raise ValueError(
+                        "La exportación de Silver geolocation no conservó "
+                        "los prefijos postales de cinco caracteres."
+                    )
+
+            hash_archivo = hashlib.sha256()
+            with temporal.open("rb") as contenido:
+                for bloque in iter(
+                    lambda: contenido.read(1024 * 1024),
+                    b"",
+                ):
+                    hash_archivo.update(bloque)
+
+            registros_manifiesto.append({
+                "tabla_silver": nombre,
+                "archivo": archivo.name,
+                "fecha_generacion": fecha_generacion,
+                "cantidad_registros": len(tabla_recargada),
+                "cantidad_columnas": len(tabla_recargada.columns),
+                "sha256": hash_archivo.hexdigest(),
+            })
+            tablas_recargadas[nombre] = tabla_recargada
+
+        archivo_manifiesto = carpeta_salida / "silver_manifest.csv"
+        temporal_manifiesto = carpeta_salida / ".silver_manifest.csv.tmp"
+        archivos_temporales.append((temporal_manifiesto, archivo_manifiesto))
+        pd.DataFrame(registros_manifiesto).to_csv(
+            temporal_manifiesto,
+            index=False,
+            encoding="utf-8-sig",
+        )
+
+        for temporal, archivo in archivos_temporales:
+            temporal.replace(archivo)
+    finally:
+        for temporal, _ in archivos_temporales:
+            if temporal.exists():
+                temporal.unlink()
+
+    print("\nPERSISTENCIA SILVER CURATED")
+    print("Directorio:", carpeta_salida)
+    print("Tablas guardadas:", len(tablas_recargadas))
+    print("Manifiesto:", archivo_manifiesto)
+    for registro in registros_manifiesto:
+        print(
+            f"- {registro['tabla_silver']}: "
+            f"{registro['cantidad_registros']:,} registros, "
+            f"{registro['cantidad_columnas']} columnas"
+        )
+
+    return tablas_recargadas
  
 # Conectar a SQL Server
 conn = pyodbc.connect(
@@ -1622,3 +1734,8 @@ if errores_validacion:
         "Fallaron las validaciones de Silver: "
         + ", ".join(errores_validacion)
     )
+
+silver = persistir_silver_curated(
+    silver,
+    Path(__file__).resolve().parent / "Data" / "Curated",
+)

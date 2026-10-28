@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reporte de riesgo de entrega tardía — OLIST</title>
+<style>
+:root { color-scheme: light; --ink:#172b3a; --muted:#607384; --line:#dce5eb; --bg:#f4f7f9; --teal:#287a78; --orange:#e08a42; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 "Segoe UI",Arial,sans-serif; }
+main { max-width:1180px; margin:0 auto; padding:32px 22px 56px; }
+header { background:#173b50; color:white; padding:32px; border-radius:18px; }
+h1 { margin:0 0 8px; font-size:clamp(26px,4vw,38px); line-height:1.15; }
+h2 { margin:0 0 14px; font-size:21px; }
+h3 { margin:20px 0 8px; font-size:17px; }
+p { margin:8px 0 12px; }
+.subtitle,.muted { color:var(--muted); }
+header .subtitle { color:#d5e5eb; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin:18px 0; }
+.card,.panel { background:white; border:1px solid var(--line); border-radius:14px; padding:18px; }
+.card span { display:block; color:var(--muted); font-size:13px; }
+.card strong { display:block; margin-top:5px; font-size:25px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr)); gap:16px; margin:16px 0; }
+.panel { margin:16px 0; overflow-x:auto; }
+.note { color:var(--muted); font-size:13px; }
+.warning { border-left:5px solid var(--orange); background:#fff8ef; padding:14px 16px; border-radius:8px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th,td { text-align:left; border-bottom:1px solid var(--line); padding:9px 10px; white-space:nowrap; }
+th { color:var(--muted); font-weight:600; }
+.matrix td { text-align:center; font-weight:650; }
+svg { width:100%; height:auto; overflow:visible; }
+.chart-label { fill:var(--ink); font-size:13px; }
+.chart-value,.chart-count { fill:var(--muted); font-size:12px; }
+.chart-legend { fill:var(--muted); font-size:12px; }
+ol { padding-left:22px; }
+li { margin:8px 0; }
+footer { color:var(--muted); font-size:12px; margin-top:24px; }
+@media print { body { background:white; } main { max-width:none; } .panel,.card,header { break-inside:avoid; } }
+</style>
+</head>
+<body><main>
+<header>
+<h1>Riesgo de entrega tardía</h1>
+<p class="subtitle">Brazilian E-Commerce Public Dataset by OLIST · evaluación temporal del conjunto de prueba</p>
+<p class="subtitle">Pedidos del 2018-05-26 al 2018-08-29 · 19,296 pedidos evaluados</p>
+</header>
+
+<section class="cards">
+<div class="card"><span>Precision</span><strong>9,8%</strong></div>
+<div class="card"><span>Recall</span><strong>36,7%</strong></div>
+<div class="card"><span>F1</span><strong>15,5%</strong></div>
+<div class="card"><span>PR-AUC</span><strong>0.105</strong></div>
+<div class="card"><span>ROC-AUC</span><strong>0.713</strong></div>
+<div class="card"><span>Umbral / alertas</span><strong>0.65 / 3,819</strong></div>
+</section>
+
+<section class="panel">
+<h2>Lectura ejecutiva</h2>
+<p>El atraso observado en este conjunto fue <strong>5,3%</strong>. Con el umbral seleccionado en validación (0.65), el modelo marcó 3,819 pedidos (19,8%) para revisión; de ellos, 375 fueron atrasos y 3,444 no lo fueron.</p>
+<div class="warning"><strong>Uso recomendado:</strong> tratar la salida como una cola de revisión y no como una decisión automática. La precision de 9,8% implica que muchas alertas no terminan en atraso; validar capacidad y costo operativo antes de escalar.</div>
+<p class="note">Este ranking corresponde a pedidos históricos del conjunto de prueba con etiquetas ya conocidas; sirve para evaluar el modelo y no representa pedidos activos listos para intervención.</p>
+</section>
+
+<div class="grid">
+<section class="panel"><h2>Atrasos por estado destino</h2>
+<p class="note">Se muestran hasta 10 estados con mayor tasa observada; mínimo 100 pedidos.</p>
+<svg viewBox="0 0 920 572" role="img" aria-label="Riesgo por estado destino"><line x1="190" y1="62" x2="830" y2="62" stroke="#dbe4ee"/><text x="178" y="91" text-anchor="end" class="chart-label">MA</text><rect x="190" y="86" width="118.7" height="12" rx="4" fill="#e08a42"/><text x="315.7" y="96" class="chart-value">13,9%</text><rect x="190" y="103" width="599.9" height="12" rx="4" fill="#287a78"/><text x="796.9" y="113" class="chart-value">70,3%</text><text x="840" y="99" class="chart-count">n=115</text><text x="178" y="139" text-anchor="end" class="chart-label">MS</text><rect x="190" y="134" width="99.7" height="12" rx="4" fill="#e08a42"/><text x="296.7" y="144" class="chart-value">11,7%</text><rect x="190" y="151" width="480.7" height="12" rx="4" fill="#287a78"/><text x="677.7" y="161" class="chart-value">56,3%</text><text x="840" y="147" class="chart-count">n=137</text><text x="178" y="187" text-anchor="end" class="chart-label">SP</text><rect x="190" y="182" width="63.5" height="12" rx="4" fill="#e08a42"/><text x="260.5" y="192" class="chart-value">7,4%</text><rect x="190" y="199" width="375.6" height="12" rx="4" fill="#287a78"/><text x="572.6" y="209" class="chart-value">44,0%</text><text x="840" y="195" class="chart-count">n=8,923</text><text x="178" y="235" text-anchor="end" class="chart-label">BA</text><rect x="190" y="230" width="45.5" height="12" rx="4" fill="#e08a42"/><text x="242.5" y="240" class="chart-value">5,3%</text><rect x="190" y="247" width="520.8" height="12" rx="4" fill="#287a78"/><text x="717.8" y="257" class="chart-value">61,0%</text><text x="840" y="243" class="chart-count">n=638</text><text x="178" y="283" text-anchor="end" class="chart-label">ES</text><rect x="190" y="278" width="45.0" height="12" rx="4" fill="#e08a42"/><text x="242.0" y="288" class="chart-value">5,3%</text><rect x="190" y="295" width="491.5" height="12" rx="4" fill="#287a78"/><text x="688.5" y="305" class="chart-value">57,6%</text><text x="840" y="291" class="chart-count">n=360</text><text x="178" y="331" text-anchor="end" class="chart-label">PB</text><rect x="190" y="326" width="37.8" height="12" rx="4" fill="#e08a42"/><text x="234.8" y="336" class="chart-value">4,4%</text><rect x="190" y="343" width="539.6" height="12" rx="4" fill="#287a78"/><text x="736.6" y="353" class="chart-value">63,2%</text><text x="840" y="339" class="chart-count">n=113</text><text x="178" y="379" text-anchor="end" class="chart-label">PE</text><rect x="190" y="374" width="37.1" height="12" rx="4" fill="#e08a42"/><text x="234.1" y="384" class="chart-value">4,3%</text><rect x="190" y="391" width="512.8" height="12" rx="4" fill="#287a78"/><text x="709.8" y="401" class="chart-value">60,1%</text><text x="840" y="387" class="chart-count">n=322</text><text x="178" y="427" text-anchor="end" class="chart-label">RJ</text><rect x="190" y="422" width="37.0" height="12" rx="4" fill="#e08a42"/><text x="234.0" y="432" class="chart-value">4,3%</text><rect x="190" y="439" width="489.8" height="12" rx="4" fill="#287a78"/><text x="686.8" y="449" class="chart-value">57,4%</text><text x="840" y="435" class="chart-count">n=2,213</text><text x="178" y="475" text-anchor="end" class="chart-label">GO</text><rect x="190" y="470" width="29.6" height="12" rx="4" fill="#e08a42"/><text x="226.6" y="480" class="chart-value">3,5%</text><rect x="190" y="487" width="455.9" height="12" rx="4" fill="#287a78"/><text x="652.9" y="497" class="chart-value">53,4%</text><text x="840" y="483" class="chart-count">n=346</text><text x="178" y="523" text-anchor="end" class="chart-label">DF</text><rect x="190" y="518" width="27.4" height="12" rx="4" fill="#e08a42"/><text x="224.4" y="528" class="chart-value">3,2%</text><rect x="190" y="535" width="439.9" height="12" rx="4" fill="#287a78"/><text x="636.9" y="545" class="chart-value">51,6%</text><text x="840" y="531" class="chart-count">n=467</text><rect x="260" y="549" width="12" height="12" rx="3" fill="#e08a42"/><text x="278" y="560" class="chart-legend">Atraso observado</text><rect x="440" y="549" width="12" height="12" rx="3" fill="#287a78"/><text x="458" y="560" class="chart-legend">Probabilidad media predicha</text></svg>
+<table><thead><tr><th>Grupo</th><th>Pedidos</th><th>Atraso observado</th><th>Prob. media</th></tr></thead><tbody><tr><td>MA</td><td>115</td><td>13,9%</td><td>70,3%</td></tr><tr><td>MS</td><td>137</td><td>11,7%</td><td>56,3%</td></tr><tr><td>SP</td><td>8,923</td><td>7,4%</td><td>44,0%</td></tr><tr><td>BA</td><td>638</td><td>5,3%</td><td>61,0%</td></tr><tr><td>ES</td><td>360</td><td>5,3%</td><td>57,6%</td></tr><tr><td>PB</td><td>113</td><td>4,4%</td><td>63,2%</td></tr><tr><td>PE</td><td>322</td><td>4,3%</td><td>60,1%</td></tr><tr><td>RJ</td><td>2,213</td><td>4,3%</td><td>57,4%</td></tr><tr><td>GO</td><td>346</td><td>3,5%</td><td>53,4%</td></tr><tr><td>DF</td><td>467</td><td>3,2%</td><td>51,6%</td></tr></tbody></table>
+</section>
+<section class="panel"><h2>Atrasos por categoría</h2>
+<p class="note">Se muestran hasta 10 categorías con mayor tasa observada; mínimo 100 pedidos.</p>
+<svg viewBox="0 0 920 572" role="img" aria-label="Riesgo por categoría"><line x1="190" y1="62" x2="830" y2="62" stroke="#dbe4ee"/><text x="178" y="91" text-anchor="end" class="chart-label">alimentos</text><rect x="190" y="86" width="112.4" height="12" rx="4" fill="#e08a42"/><text x="309.4" y="96" class="chart-value">11,4%</text><rect x="190" y="103" width="542.4" height="12" rx="4" fill="#287a78"/><text x="739.4" y="113" class="chart-value">55,1%</text><text x="840" y="99" class="chart-count">n=184</text><text x="178" y="139" text-anchor="end" class="chart-label">moveis_sala</text><rect x="190" y="134" width="94.2" height="12" rx="4" fill="#e08a42"/><text x="291.2" y="144" class="chart-value">9,6%</text><rect x="190" y="151" width="472.0" height="12" rx="4" fill="#287a78"/><text x="669.0" y="161" class="chart-value">47,9%</text><text x="840" y="147" class="chart-count">n=115</text><text x="178" y="187" text-anchor="end" class="chart-label">construcao_ferramentas...</text><rect x="190" y="182" width="86.0" height="12" rx="4" fill="#e08a42"/><text x="283.0" y="192" class="chart-value">8,7%</text><rect x="190" y="199" width="619.0" height="12" rx="4" fill="#287a78"/><text x="816.0" y="209" class="chart-value">62,9%</text><text x="840" y="195" class="chart-count">n=126</text><text x="178" y="235" text-anchor="end" class="chart-label">moveis_escritorio</text><rect x="190" y="230" width="83.7" height="12" rx="4" fill="#e08a42"/><text x="280.7" y="240" class="chart-value">8,5%</text><rect x="190" y="247" width="440.3" height="12" rx="4" fill="#287a78"/><text x="637.3" y="257" class="chart-value">44,7%</text><text x="840" y="243" class="chart-count">n=153</text><text x="178" y="283" text-anchor="end" class="chart-label">cool_stuff</text><rect x="190" y="278" width="69.9" height="12" rx="4" fill="#e08a42"/><text x="266.9" y="288" class="chart-value">7,1%</text><rect x="190" y="295" width="402.7" height="12" rx="4" fill="#287a78"/><text x="599.7" y="305" class="chart-value">40,9%</text><text x="840" y="291" class="chart-count">n=338</text><text x="178" y="331" text-anchor="end" class="chart-label">papelaria</text><rect x="190" y="326" width="69.6" height="12" rx="4" fill="#e08a42"/><text x="266.6" y="336" class="chart-value">7,1%</text><rect x="190" y="343" width="466.0" height="12" rx="4" fill="#287a78"/><text x="663.0" y="353" class="chart-value">47,3%</text><text x="840" y="339" class="chart-count">n=481</text><text x="178" y="379" text-anchor="end" class="chart-label">beleza_saude</text><rect x="190" y="374" width="69.3" height="12" rx="4" fill="#e08a42"/><text x="266.3" y="384" class="chart-value">7,0%</text><rect x="190" y="391" width="493.9" height="12" rx="4" fill="#287a78"/><text x="690.9" y="401" class="chart-value">50,2%</text><text x="840" y="387" class="chart-count">n=2,301</text><text x="178" y="427" text-anchor="end" class="chart-label">construcao_ferramentas...</text><rect x="190" y="422" width="64.9" height="12" rx="4" fill="#e08a42"/><text x="261.9" y="432" class="chart-value">6,6%</text><rect x="190" y="439" width="596.6" height="12" rx="4" fill="#287a78"/><text x="793.6" y="449" class="chart-value">60,6%</text><text x="840" y="435" class="chart-count">n=334</text><text x="178" y="475" text-anchor="end" class="chart-label">malas_acessorios</text><rect x="190" y="470" width="64.4" height="12" rx="4" fill="#e08a42"/><text x="261.4" y="480" class="chart-value">6,5%</text><rect x="190" y="487" width="327.0" height="12" rx="4" fill="#287a78"/><text x="524.0" y="497" class="chart-value">33,2%</text><text x="840" y="483" class="chart-count">n=153</text><text x="178" y="523" text-anchor="end" class="chart-label">automotivo</text><rect x="190" y="518" width="58.0" height="12" rx="4" fill="#e08a42"/><text x="255.0" y="528" class="chart-value">5,9%</text><rect x="190" y="535" width="531.6" height="12" rx="4" fill="#287a78"/><text x="728.6" y="545" class="chart-value">54,0%</text><text x="840" y="531" class="chart-count">n=951</text><rect x="260" y="549" width="12" height="12" rx="3" fill="#e08a42"/><text x="278" y="560" class="chart-legend">Atraso observado</text><rect x="440" y="549" width="12" height="12" rx="3" fill="#287a78"/><text x="458" y="560" class="chart-legend">Probabilidad media predicha</text></svg>
+<table><thead><tr><th>Grupo</th><th>Pedidos</th><th>Atraso observado</th><th>Prob. media</th></tr></thead><tbody><tr><td>alimentos</td><td>184</td><td>11,4%</td><td>55,1%</td></tr><tr><td>moveis_sala</td><td>115</td><td>9,6%</td><td>47,9%</td></tr><tr><td>construcao_ferramentas_iluminacao</td><td>126</td><td>8,7%</td><td>62,9%</td></tr><tr><td>moveis_escritorio</td><td>153</td><td>8,5%</td><td>44,7%</td></tr><tr><td>cool_stuff</td><td>338</td><td>7,1%</td><td>40,9%</td></tr><tr><td>papelaria</td><td>481</td><td>7,1%</td><td>47,3%</td></tr><tr><td>beleza_saude</td><td>2,301</td><td>7,0%</td><td>50,2%</td></tr><tr><td>construcao_ferramentas_construcao</td><td>334</td><td>6,6%</td><td>60,6%</td></tr><tr><td>malas_acessorios</td><td>153</td><td>6,5%</td><td>33,2%</td></tr><tr><td>automotivo</td><td>951</td><td>5,9%</td><td>54,0%</td></tr></tbody></table>
+</section>
+</div>
+<section class="panel"><h2>Evolución mensual en prueba</h2>
+<p class="note">Compara la tasa real de atraso con la probabilidad media estimada por el modelo.</p>
+<svg viewBox="0 0 920 284" role="img" aria-label="Riesgo por mes"><line x1="190" y1="62" x2="830" y2="62" stroke="#dbe4ee"/><text x="178" y="91" text-anchor="end" class="chart-label">2018-05</text><rect x="190" y="86" width="3.1" height="12" rx="4" fill="#e08a42"/><text x="200.1" y="96" class="chart-value">0,3%</text><rect x="190" y="103" width="264.4" height="12" rx="4" fill="#287a78"/><text x="461.4" y="113" class="chart-value">24,8%</text><text x="840" y="99" class="chart-count">n=693</text><text x="178" y="139" text-anchor="end" class="chart-label">2018-06</text><rect x="190" y="134" width="14.5" height="12" rx="4" fill="#e08a42"/><text x="211.5" y="144" class="chart-value">1,4%</text><rect x="190" y="151" width="406.8" height="12" rx="4" fill="#287a78"/><text x="603.8" y="161" class="chart-value">38,1%</text><text x="840" y="147" class="chart-count">n=6,096</text><text x="178" y="187" text-anchor="end" class="chart-label">2018-07</text><rect x="190" y="182" width="47.8" height="12" rx="4" fill="#e08a42"/><text x="244.8" y="192" class="chart-value">4,5%</text><rect x="190" y="199" width="557.3" height="12" rx="4" fill="#287a78"/><text x="754.3" y="209" class="chart-value">52,3%</text><text x="840" y="195" class="chart-count">n=6,156</text><text x="178" y="235" text-anchor="end" class="chart-label">2018-08</text><rect x="190" y="230" width="110.8" height="12" rx="4" fill="#e08a42"/><text x="307.8" y="240" class="chart-value">10,4%</text><rect x="190" y="247" width="608.5" height="12" rx="4" fill="#287a78"/><text x="805.5" y="257" class="chart-value">57,1%</text><text x="840" y="243" class="chart-count">n=6,351</text><rect x="260" y="261" width="12" height="12" rx="3" fill="#e08a42"/><text x="278" y="272" class="chart-legend">Atraso observado</text><rect x="440" y="261" width="12" height="12" rx="3" fill="#287a78"/><text x="458" y="272" class="chart-legend">Probabilidad media predicha</text></svg>
+<table><thead><tr><th>Grupo</th><th>Pedidos</th><th>Atraso observado</th><th>Prob. media</th></tr></thead><tbody><tr><td>2018-05</td><td>693</td><td>0,3%</td><td>24,8%</td></tr><tr><td>2018-06</td><td>6,096</td><td>1,4%</td><td>38,1%</td></tr><tr><td>2018-07</td><td>6,156</td><td>4,5%</td><td>52,3%</td></tr><tr><td>2018-08</td><td>6,351</td><td>10,4%</td><td>57,1%</td></tr></tbody></table>
+</section>
+
+<section class="panel"><h2>Matriz de confusión</h2>
+<p class="note">Con el umbral 0.65; positivos significan pedidos priorizados por el modelo.</p>
+<table class="matrix"><thead><tr><th></th><th>Predijo sin atraso</th><th>Predijo atraso</th></tr></thead><tbody><tr><th>Sin atraso real</th><td>14,831 (TN)</td><td>3,444 (FP)</td></tr><tr><th>Atraso real</th><td>646 (FN)</td><td>375 (TP)</td></tr></tbody></table>
+</section>
+
+<section class="panel"><h2>Propuesta de acción preventiva</h2>
+<ol>
+<li><strong>Revisión humana:</strong> el equipo de operaciones revisa primero la cola ordenada por probabilidad, comenzando por el mayor riesgo; el umbral actual sirve para marcar candidatos, no para prometer atraso.</li>
+<li><strong>Validación del pedido:</strong> confirmar el estado del despacho y la información disponible con vendedor o transportista antes de contactar al cliente o cambiar la operación.</li>
+<li><strong>Acción proporcional:</strong> si se confirma una señal logística accionable, solicitar actualización/plan al transportista o vendedor y comunicar al cliente solo cuando exista información verificada.</li>
+<li><strong>Piloto controlado:</strong> definir con operaciones una capacidad diaria de revisión y registrar alertas revisadas, atrasos confirmados, falsos positivos, tiempo de respuesta y acciones tomadas. La capacidad no se fija en este reporte porque no se proporcionó un límite operativo.</li>
+<li><strong>Reevaluación:</strong> comparar resultados del piloto y costos de falsos positivos y falsos negativos antes de cambiar el umbral; recalibrar o reentrenar si cambia el desempeño o la población de pedidos.</li>
+</ol>
+</section>
+
+<section class="panel"><h2>Diez pedidos con mayor probabilidad</h2>
+<p class="note">Muestra histórica del conjunto de prueba; no usar como cola operativa vigente.</p>
+<table><thead><tr><th>Prioridad</th><th>Order ID</th><th>Probabilidad</th><th>Estado destino</th></tr></thead>
+<tbody><tr><td>1</td><td><code>cf4659487be50c0c317cff3564c4a840</code></td><td>100,0%</td><td>PB</td></tr><tr><td>2</td><td><code>43bdbd9dc0931d72befdf4765af6c442</code></td><td>96,6%</td><td>PB</td></tr><tr><td>3</td><td><code>3fde74c28a3d5d618c00f26d51baafa0</code></td><td>96,4%</td><td>SC</td></tr><tr><td>4</td><td><code>076d1555fb53a89b0ef4d529e527a0f6</code></td><td>95,9%</td><td>PR</td></tr><tr><td>5</td><td><code>97415fb39aa90a8bfea4424d7bfbc5db</code></td><td>95,2%</td><td>RJ</td></tr><tr><td>6</td><td><code>b72f2809724c9676ae9bc68a12d9626d</code></td><td>95,1%</td><td>RJ</td></tr><tr><td>7</td><td><code>94fca82966c05ba707f4e7dc0c50aa3c</code></td><td>95,0%</td><td>MG</td></tr><tr><td>8</td><td><code>e7ad3898894027b09ce153449f7bc10d</code></td><td>95,0%</td><td>RJ</td></tr><tr><td>9</td><td><code>fe1a4e86595ca403c258c586e8fd99c4</code></td><td>94,8%</td><td>RJ</td></tr><tr><td>10</td><td><code>3e734ad65fdbca928a1a4de48d096ce4</code></td><td>94,6%</td><td>RJ</td></tr></tbody></table>
+</section>
+<footer>Generado a partir de outputs/gold_order_delivery_risk_features.csv y outputs/pedidos_priorizados.csv. Los agregados por grupo se calculan sobre el conjunto temporal de prueba y muestran atraso observado y probabilidad media, no relaciones causales.</footer>
+</main></body></html>

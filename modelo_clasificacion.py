@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -277,6 +278,33 @@ def main():
         )
 
     modelo_final = candidatos[modelo_elegido]
+    if modelo_elegido != "Regresion Logistica":
+        raise RuntimeError(
+            "El modelo seleccionado no es Regresion Logistica; "
+            "no se guardara un artefacto con ese nombre."
+        )
+
+    archivo_modelo = (
+        Path(__file__).resolve().parent
+        / "outputs"
+        / "modelo_regresion_logistica_v1.joblib"
+    )
+    archivo_modelo.parent.mkdir(parents=True, exist_ok=True)
+
+    if archivo_modelo.exists():
+        raise FileExistsError(
+            f"No se sobrescribira el artefacto existente: {archivo_modelo}"
+        )
+
+    joblib.dump(
+        {
+            "pipeline": modelo_final,
+            "umbral": float(umbral_seleccionado),
+            "variables_predictoras": X.columns.tolist(),
+        },
+        archivo_modelo,
+    )
+
     prob_test = probabilidades_positivas(modelo_final, X_test)
     metricas_test = calcular_metricas(
         y_test,

@@ -186,3 +186,31 @@ Se conservará la tabla original de Bronze sin modificaciones. La fila correspon
 ### Resultados de la ejecución
 - Gold generó 96.476 filas y 17 columnas, con 96.476 `order_id` únicos, cero nulos y cero duplicados.
 - La lectura de comprobación del CSV confirmó los 96.476 identificadores únicos y el mismo orden del DataFrame Gold.
+
+## Versión 1.1 — Persistencia de Silver en Curated
+**Fecha:** 28 de octubre de 2026
+
+### Cambios
+- `silver.py` exporta las nueve tablas curadas a `Data/Curated/` una vez que terminan correctamente las validaciones automáticas.
+- Se genera `silver_manifest.csv` con fecha de generación, filas, columnas y hash SHA-256 de cada archivo.
+- Se leen de vuelta los CSV y se verifican cantidad de filas, columnas y conservación de prefijos postales de cinco caracteres antes de actualizar la salida.
+- El diccionario `silver` queda cargado desde los CSV persistidos para que `gold.py` consuma la capa Curated.
+- Bronze permanece como fuente original y no se modifica.
+
+## Versión 1.2 — Documentación de tratamientos Silver y joins Gold
+**Fecha:** 28 de octubre de 2026
+
+### Cambios
+- El README describe los tratamientos de valores faltantes, conversiones, duplicados y anomalías, y aclara que no se eliminan registros automáticamente.
+- Se documentan las cardinalidades, claves, agregaciones y decisiones de granularidad de los joins de Gold.
+- Se explica la exclusión de pedidos sin fechas suficientes para formar la etiqueta supervisada y el uso de left joins para preservar pedidos sin coincidencia geográfica.
+- Se corrige la descripción de Silver: valida duplicados en lugar de aplicar una deduplicación indiscriminada.
+
+## Versión 1.3 — Reporte de riesgo y propuesta preventiva
+**Fecha:** 28 de octubre de 2026
+
+### Cambios
+- Se añade `reporte_riesgo.py` para generar un reporte HTML autocontenido con métricas, matriz de confusión y agregados de riesgo por estado destino, categoría y mes.
+- El reporte valida unicidad de `order_id`, cobertura del ranking contra Gold, etiquetas binarias y probabilidades dentro de rango antes de presentar resultados.
+- Se documenta una propuesta de revisión humana y piloto operativo que reconoce el bajo precision y que el ranking corresponde a pedidos históricos del conjunto de prueba.
+- Se documenta la capacidad de revisión como parámetro que operaciones debe definir; no se supone un límite operativo no proporcionado.
