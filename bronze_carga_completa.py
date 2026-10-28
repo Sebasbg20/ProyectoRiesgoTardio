@@ -35,9 +35,8 @@ def cargar_archivo(conexion, nombre_archivo, tabla):
 
     with archivo.open("r", encoding="utf-8-sig", newline="") as f:
         lector = csv.reader(f)
-        columnas = next(lector)
+        columnas = next(lector, None)
 
-        # Validar nombres de columnas
         if not columnas or len(set(columnas)) != len(columnas):
             raise ValueError("Encabezados inválidos")
 
@@ -114,11 +113,35 @@ def cargar_archivo(conexion, nombre_archivo, tabla):
         print(f"OK: {destino} - {cargados} registros")
 
 
+def preparar_base_datos(conexion):
+    cursor = conexion.cursor()
+    cursor.execute("""
+        IF SCHEMA_ID(N'bronze') IS NULL
+            EXEC(N'CREATE SCHEMA bronze');
+
+        IF OBJECT_ID(N'dbo.bronze_load_log', N'U') IS NULL
+        BEGIN
+            CREATE TABLE dbo.bronze_load_log (
+                load_id BIGINT IDENTITY(1, 1) PRIMARY KEY,
+                source_file NVARCHAR(255) NOT NULL,
+                target_table NVARCHAR(255) NOT NULL,
+                source_row_count BIGINT NOT NULL,
+                loaded_row_count BIGINT NOT NULL,
+                load_status NVARCHAR(20) NOT NULL,
+                notes NVARCHAR(MAX) NULL,
+                loaded_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+            )
+        END
+    """)
+    conexion.commit()
+
+
 def main():
     conexion = pyodbc.connect(CONEXION)
     conexion.autocommit = False
 
     try:
+        preparar_base_datos(conexion)
         for archivo, tabla in ARCHIVOS.items():
             try:
                 cargar_archivo(conexion, archivo, tabla)
@@ -132,5 +155,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
