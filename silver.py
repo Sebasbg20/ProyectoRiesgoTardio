@@ -132,6 +132,21 @@ GROUP BY geolocation_zip_code_prefix
 """
  
 geo_silver = pd.read_sql(consulta_geo, conn)
+consulta_geo_validos = """
+WITH coordenadas AS (
+    SELECT
+        TRY_CONVERT(FLOAT, geolocation_lat) AS lat,
+        TRY_CONVERT(FLOAT, geolocation_lng) AS lng
+    FROM bronze.geolocation_raw
+)
+SELECT COUNT_BIG(*) AS cantidad
+FROM coordenadas
+WHERE lat BETWEEN -34 AND 6
+  AND lng BETWEEN -74 AND -28
+"""
+geolocalizaciones_validas = int(
+    pd.read_sql(consulta_geo_validos, conn).loc[0, "cantidad"]
+)
  
 geo_silver["geolocation_zip_code_prefix"] = (
     geo_silver["geolocation_zip_code_prefix"]
@@ -1319,3 +1334,291 @@ print("Diferencia maxima:",
  
 print("Diferencia minima:",
       verificacion["diferencia"].min())
+
+
+print("\nVALIDACION AUTOMATICA DE CONSISTENCIA SILVER:")
+
+errores_validacion = []
+resultados_validacion = []
+
+
+def comprobar_regla(nombre, resultado, consistente):
+    resultados_validacion.append((nombre, resultado, consistente))
+    if not consistente:
+        errores_validacion.append(nombre)
+
+
+tablas_conservadas = [
+    "customers",
+    "sellers",
+    "products",
+    "nametranslation",
+    "orders",
+    "orderitems",
+    "payments",
+    "reviews",
+]
+
+conteos_entrada = {"customers": customers}
+conteos_entrada.update(datos)
+conteos_tablas = {
+    nombre: (len(conteos_entrada[nombre]), len(silver[nombre]))
+    for nombre in tablas_conservadas
+}
+comprobar_regla(
+    "Conservacion de filas en tablas no agregadas",
+    ", ".join(
+        f"{nombre} {entrada}->{salida}"
+        for nombre, (entrada, salida) in conteos_tablas.items()
+    ),
+    all(entrada == salida for entrada, salida in conteos_tablas.values()),
+)
+
+claves_duplicadas = {
+    "orders.order_id": silver["orders"]["order_id"].duplicated().sum(),
+    "customers.customer_id": silver["customers"]["customer_id"].duplicated().sum(),
+    "products.product_id": silver["products"]["product_id"].duplicated().sum(),
+    "sellers.seller_id": silver["sellers"]["seller_id"].duplicated().sum(),
+    "orderitems.(order_id, order_item_id)": silver["orderitems"].duplicated(
+        subset=["order_id", "order_item_id"]
+    ).sum(),
+    "payments.(order_id, payment_sequential)": silver["payments"].duplicated(
+        subset=["order_id", "payment_sequential"]
+    ).sum(),
+}
+comprobar_regla(
+    "Unicidad de claves",
+    ", ".join(f"{clave}={cantidad}" for clave, cantidad in claves_duplicadas.items()),
+    all(cantidad == 0 for cantidad in claves_duplicadas.values()),
+)
+
+referencias_rotas = {
+    "orderitems.product_id": (~silver["orderitems"]["product_id"].isin(
+        silver["products"]["product_id"]
+    )).sum(),
+    "orderitems.order_id": (~silver["orderitems"]["order_id"].isin(
+        silver["orders"]["order_id"]
+    )).sum(),
+    "orderitems.seller_id": (~silver["orderitems"]["seller_id"].isin(
+        silver["sellers"]["seller_id"]
+    )).sum(),
+    "orders.customer_id": (~silver["orders"]["customer_id"].isin(
+        silver["customers"]["customer_id"]
+    )).sum(),
+    "payments.order_id": (~silver["payments"]["order_id"].isin(
+        silver["orders"]["order_id"]
+    )).sum(),
+}
+comprobar_regla(
+    "Integridad referencial",
+    ", ".join(f"{clave}={cantidad}" for clave, cantidad in referencias_rotas.items()),
+    all(cantidad == 0 for cantidad in referencias_rotas.values()),
+)
+
+columnas_zip = [
+    ("customers", "customer_zip_code_prefix"),
+    ("sellers", "seller_zip_code_prefix"),
+]
+zip_consistentes = []
+zip_largos = {}
+for tabla, columna in columnas_zip:
+    esperado = conteos_entrada[tabla][columna].astype(str).str.zfill(5)
+    obtenido = silver[tabla][columna]
+    zip_consistentes.append(esperado.equals(obtenido))
+    zip_largos[tabla] = int(obtenido.str.len().eq(5).sum())
+
+geo_zip = silver["geolocation"]["geolocation_zip_code_prefix"]
+geo_zip_esperado = datos["geolocation"][
+    "geolocation_zip_code_prefix"
+].astype(str).str.zfill(5)
+zip_consistentes.append(geo_zip_esperado.equals(geo_zip))
+zip_largos["geolocation"] = int(geo_zip.str.len().eq(5).sum())
+duplicados_geo = int(geo_zip.duplicated().sum())
+zip_longitud_ok = all(
+    zip_largos[tabla] == len(silver[tabla])
+    for tabla in ("customers", "sellers", "geolocation")
+)
+clientes_con_geo_total = int(
+    silver["customers"]["customer_zip_code_prefix"].isin(geo_zip).sum()
+)
+vendedores_con_geo_total = int(
+    silver["sellers"]["seller_zip_code_prefix"].isin(geo_zip).sum()
+)
+geo_silver_check = silver["geolocation"]
+geo_en_rango = (
+    geo_silver_check["latitud"].between(-34, 6)
+    & geo_silver_check["longitud"].between(-74, -28)
+)
+geo_cantidad_valida = geo_silver_check["cantidad"].gt(0)
+geolocalizaciones_agregadas = int(geo_silver_check["cantidad"].sum())
+comprobar_regla(
+    "Normalizacion postal y agregacion geografica",
+    f"codigos de 5 digitos={zip_largos}; prefijos geograficos duplicados={duplicados_geo}; coordenadas validas Bronze/Silver agregadas={geolocalizaciones_validas}/{geolocalizaciones_agregadas}; clientes con geolocalizacion={clientes_con_geo_total}/{len(silver['customers'])}; vendedores con geolocalizacion={vendedores_con_geo_total}/{len(silver['sellers'])}",
+    all(zip_consistentes)
+    and zip_longitud_ok
+    and duplicados_geo == 0
+    and geo_en_rango.all()
+    and geo_cantidad_valida.all()
+    and geolocalizaciones_agregadas == geolocalizaciones_validas,
+)
+
+conversiones_consistentes = []
+for columna in columnas_fisicas:
+    esperado = pd.to_numeric(
+        datos["products"][columna].replace(r"^\s*$", pd.NA, regex=True),
+        errors="coerce",
+    )
+    conversiones_consistentes.append(
+        esperado.equals(silver["products"][columna])
+    )
+esperado = pd.to_numeric(
+    datos["products"]["product_photos_qty"],
+    errors="coerce",
+)
+conversiones_consistentes.append(
+    esperado.equals(silver["products"]["product_photos_qty"])
+)
+for tabla, columnas in (
+    ("orderitems", ["price", "freight_value"]),
+    ("payments", ["payment_value"]),
+):
+    for columna in columnas:
+        esperado = pd.to_numeric(
+            datos[tabla][columna].replace(r"^\s*$", pd.NA, regex=True),
+            errors="coerce",
+        )
+        conversiones_consistentes.append(
+            esperado.equals(silver[tabla][columna])
+        )
+
+productos = silver["products"]
+indicadores_productos_consistentes = (
+    productos["categoria_faltante"].equals(
+        productos["product_category_name"].isna()
+    )
+    and productos["categoria_analisis"].equals(
+        productos["product_category_name"].fillna("Sin categoría")
+    )
+    and productos["datos_fisicos_incompletos"].equals(
+        productos[columnas_fisicas].isna().any(axis=1)
+    )
+    and productos["peso_cero"].equals(
+        productos["product_weight_g"].eq(0)
+    )
+)
+conversiones_consistentes.append(indicadores_productos_consistentes)
+comprobar_regla(
+    "Conversion numerica e indicadores de productos",
+    f"conversiones e indicadores coherentes={sum(conversiones_consistentes)}/{len(conversiones_consistentes)}; productos con peso cero={int(productos['peso_cero'].sum())}",
+    all(conversiones_consistentes),
+)
+
+items_silver = silver["orderitems"]
+pagos_silver = silver["payments"]
+calidad_monetaria = {
+    "precios negativos": int(items_silver["price"].lt(0).sum()),
+    "envios negativos": int(items_silver["freight_value"].lt(0).sum()),
+    "precios faltantes": int(items_silver["price"].isna().sum()),
+    "envios faltantes": int(items_silver["freight_value"].isna().sum()),
+    "pagos negativos": int(pagos_silver["payment_value"].lt(0).sum()),
+    "pagos faltantes": int(pagos_silver["payment_value"].isna().sum()),
+    "pagos en cero": int(pagos_silver["payment_value"].eq(0).sum()),
+    "tipos not_defined": int(pagos_silver["payment_type"].eq("not_defined").sum()),
+    "envios en cero": int(items_silver["freight_value"].eq(0).sum()),
+}
+comprobar_regla(
+    "Calidad de importes y valores especiales",
+    ", ".join(f"{nombre}={cantidad}" for nombre, cantidad in calidad_monetaria.items()),
+    all(
+        calidad_monetaria[nombre] == 0
+        for nombre in (
+            "precios negativos",
+            "envios negativos",
+            "precios faltantes",
+            "envios faltantes",
+            "pagos negativos",
+            "pagos faltantes",
+        )
+    ),
+)
+
+fechas_consistentes = []
+for columna in columnas_fecha:
+    esperado = pd.to_datetime(
+        datos["orders"][columna].replace(r"^\s*$", pd.NA, regex=True),
+        errors="coerce",
+    )
+    fechas_consistentes.append(esperado.equals(silver["orders"][columna]))
+
+ordenes = silver["orders"]
+entregas_antes_compra = (
+    ordenes["order_purchase_timestamp"].notna()
+    & ordenes["order_delivered_customer_date"].notna()
+    & (
+        ordenes["order_delivered_customer_date"]
+        < ordenes["order_purchase_timestamp"]
+    )
+)
+aprobaciones_antes_compra = (
+    ordenes["order_purchase_timestamp"].notna()
+    & ordenes["order_approved_at"].notna()
+    & (ordenes["order_approved_at"] < ordenes["order_purchase_timestamp"])
+)
+entregas_antes_aprobacion = (
+    ordenes["order_approved_at"].notna()
+    & ordenes["order_delivered_customer_date"].notna()
+    & (
+        ordenes["order_delivered_customer_date"]
+        < ordenes["order_approved_at"]
+    )
+)
+fechas_consistentes.extend([
+    ordenes["entrega_antes_aprobacion"].equals(entregas_antes_aprobacion),
+    ordenes["entregado_sin_aprobacion"].equals(
+        ordenes["order_status"].eq("delivered")
+        & ordenes["order_approved_at"].isna()
+    ),
+])
+comprobar_regla(
+    "Fechas e indicadores cronologicos",
+    f"columnas de fecha e indicadores coherentes={sum(fechas_consistentes)}/{len(fechas_consistentes)}; entrega antes de compra={int(entregas_antes_compra.sum())}; aprobacion antes de compra={int(aprobaciones_antes_compra.sum())}; entrega antes de aprobacion={int(entregas_antes_aprobacion.sum())}",
+    all(fechas_consistentes)
+    and int(entregas_antes_compra.sum()) == 0
+    and int(aprobaciones_antes_compra.sum()) == 0,
+)
+
+pagos_reconciliados = (
+    comparacion["diferencia"].sort_index().round(2)
+    .equals(verificacion["diferencia"].sort_index().round(2))
+)
+comprobar_regla(
+    "Conciliacion independiente de pagos",
+    f"pedidos comparados={len(comparacion)}; diferencias > 0.01={int((comparacion['diferencia'].abs() > 0.01).sum())}; resultados identicos={pagos_reconciliados}",
+    pagos_reconciliados,
+)
+
+print("\n" + "=" * 72)
+print("RESUMEN DE VALIDACIONES SILVER")
+print("=" * 72)
+for numero, (nombre, resultado, consistente) in enumerate(
+    resultados_validacion,
+    start=1,
+):
+    estado = "OK" if consistente else "ERROR"
+    print(f"{numero:02}. [{estado}] {nombre}")
+    for detalle in resultado.split("; "):
+        print(f"     - {detalle}")
+
+reglas_correctas = len(resultados_validacion) - len(errores_validacion)
+print("-" * 72)
+print(
+    f"Resultado: {reglas_correctas}/{len(resultados_validacion)} reglas "
+    f"correctas; {len(errores_validacion)} con error."
+)
+print("=" * 72)
+
+if errores_validacion:
+    raise RuntimeError(
+        "Fallaron las validaciones de Silver: "
+        + ", ".join(errores_validacion)
+    )

@@ -138,3 +138,22 @@ Se conservará la tabla original de Bronze sin modificaciones. La fila correspon
 
 **Estado:** Validación inicial completada. Pendiente automatizar la carga reproducible y registrar la trazabilidad.
 
+## Versión 0.8 — Verificación de resultados reales y consistencia de Silver
+**Fecha:** 27 de octubre de 2026
+
+**Ejecución:** `python silver.py` contra la base SQL Server local `olist`. La ejecución terminó correctamente y las reglas automatizadas de consistencia finalizaron sin errores.
+
+### Reglas medibles y resultados
+
+1. **Conservación de registros:** las tablas sin agregación conservaron la cantidad de filas entre Bronze y Silver: customers 99.441, sellers 3.095, products 32.951, nametranslation 71, orders 99.441, orderitems 112.650, payments 103.886 y reviews 99.224. Geolocation se resume por prefijo postal: de 1.000.163 filas Bronze, 1.000.132 coordenadas válidas quedaron contabilizadas en 19.011 prefijos Silver.
+2. **Unicidad de claves:** cero duplicados en `order_id`, `customer_id`, `product_id`, `seller_id`, la clave compuesta `(order_id, order_item_id)` de orderitems y `(order_id, payment_sequential)` de payments.
+3. **Integridad referencial:** cero referencias huérfanas en orderitems hacia products, orders y sellers, en orders hacia customers y en payments hacia orders.
+4. **Normalización y cobertura postal:** los 99.441 códigos postales de customers, los 3.095 de sellers y los 19.011 de geolocation tienen cinco caracteres. Geolocation no tiene prefijos duplicados y sus 1.000.132 coordenadas válidas en Bronze coinciden con la suma de registros agregados en Silver. Se encontraron coincidencias para 99.162 customers y 3.088 sellers.
+5. **Conversiones numéricas e indicadores de productos:** 9 de 9 comprobaciones de conversiones e indicadores coincidieron con el recálculo desde Bronze. Se mantienen identificados 4 productos con peso cero.
+6. **Calidad monetaria:** cero precios o envíos negativos, cero importes faltantes y cero pagos negativos o faltantes. Se conservaron y contabilizaron 9 pagos en cero, 3 pagos `not_defined` y 383 envíos en cero, sin eliminarlos.
+7. **Fechas e indicadores cronológicos:** las cinco conversiones de fecha y los dos indicadores se verificaron (7 de 7). No hay entregas anteriores a la compra ni aprobaciones anteriores a la compra. Se detectaron 61 entregas anteriores a la aprobación; se conservan como anomalías de origen, correctamente reflejadas por el indicador.
+8. **Conciliación independiente de pagos:** se compararon 98.665 pedidos. Los dos cálculos independientes produjeron resultados idénticos y detectaron 303 diferencias superiores a 0,01; son excepciones observadas, no se modificaron importes ni registros.
+
+### Cambios
+- `silver.py` ahora ejecuta estas reglas al finalizar, imprime los valores observados y detiene la ejecución con error si una transformación o una restricción de consistencia falla.
+- Las anomalías de origen (por ejemplo, fechas cronológicas y diferencias de conciliación) se informan como resultados medibles, sin confundirse con errores de transformación ni eliminarse automáticamente.
