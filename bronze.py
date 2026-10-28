@@ -1,8 +1,4 @@
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 7e8f4d63893ecaaef01227769471c05d82238fcd
 from pathlib import Path
 import csv
 
