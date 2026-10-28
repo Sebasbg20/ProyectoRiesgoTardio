@@ -157,3 +157,20 @@ Se conservará la tabla original de Bronze sin modificaciones. La fila correspon
 ### Cambios
 - `silver.py` ahora ejecuta estas reglas al finalizar, imprime los valores observados y detiene la ejecución con error si una transformación o una restricción de consistencia falla.
 - Las anomalías de origen (por ejemplo, fechas cronológicas y diferencias de conciliación) se informan como resultados medibles, sin confundirse con errores de transformación ni eliminarse automáticamente.
+
+## Versión 0.9 — Selección y evaluación temporal del modelo
+**Fecha:** 27 de octubre de 2026
+
+### Cambios
+- Se añadió un baseline separado `DummyClassifier` y se comparan regresión logística, Random Forest e HistGradientBoosting usando una partición cronológica de entrenamiento, validación y prueba.
+- El modelo se selecciona por PR-AUC en validación, apropiada para comparar clases desbalanceadas. El umbral operativo se selecciona por F1 en validación; la prueba temporal queda reservada para la evaluación final.
+- Se informa la importancia por permutación de las variables sobre una muestra de prueba, sin interpretarla como causalidad.
+- Se exporta el ranking de pedidos de prueba a `outputs/pedidos_priorizados.csv`, con probabilidad, umbral y bandera de priorización; no se incluye la etiqueta real.
+
+### Resultados de la ejecución
+- Gold aportó 96.476 pedidos y 17 columnas. La división temporal produjo 61.744 pedidos de entrenamiento, 15.436 de validación y 19.296 de prueba.
+- En validación, el baseline tuvo PR-AUC 0,081 y ROC-AUC 0,500. La regresión logística obtuvo PR-AUC 0,2076, Random Forest 0,1781 e HistGradientBoosting 0,1860. Se seleccionó regresión logística.
+- El umbral que maximizó F1 en validación fue 0,65 (precision 0,2165; recall 0,4513; F1 0,2926).
+- En la prueba temporal, con ese umbral, se obtuvo precision 0,0982, recall 0,3673, F1 0,1550, PR-AUC 0,1053 y ROC-AUC 0,7127. Con umbral 0,50, F1 fue 0,1585; por tanto, el umbral escogido en validación no mejoró F1 en la prueba y el resultado debe interpretarse como evidencia de generalización limitada.
+- En la interpretación por permutación, `dias_estimados_entrega` mostró la mayor caída media de PR-AUC (0,05851) en 5.000 pedidos de prueba.
+- El CSV contiene 19.296 pedidos ordenados por probabilidad; 3.819 superan el umbral de 0,65.
