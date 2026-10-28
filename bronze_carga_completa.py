@@ -1,5 +1,8 @@
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 7e8f4d63893ecaaef01227769471c05d82238fcd
 from pathlib import Path
 import csv
 import re
@@ -25,7 +28,10 @@ ARCHIVOS = {
     "olist_orders_dataset.csv": "orders_raw",
     "olist_products_dataset.csv": "products_raw",
     "olist_sellers_dataset.csv": "sellers_raw",
+<<<<<<< HEAD
     "product_category_name_translation.csv": "nametranslation_raw",
+=======
+>>>>>>> 7e8f4d63893ecaaef01227769471c05d82238fcd
 }
 
 def cargar_archivo(conexion, nombre_archivo, tabla):
