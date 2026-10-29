@@ -346,13 +346,14 @@ def main():
     archivo_modelo = (
         BASE
         / "outputs"
-        / "modelo_riesgo_entrega_v1.joblib"
+        / "modelo_clasificacion_v1.joblib"
     )
     archivo_modelo.parent.mkdir(parents=True, exist_ok=True)
 
     joblib.dump(
         {
             "pipeline": modelo_final,
+            "nombre_modelo": modelo_elegido,
             "umbral": float(umbral_seleccionado),
             "variables_predictoras": X.columns.tolist(),
             "fecha_referencia_particion": "order_approved_at",
