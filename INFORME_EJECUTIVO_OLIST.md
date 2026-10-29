@@ -161,7 +161,7 @@ Se compararon cuatro alternativas:
 
 Para entrenar los modelos fue necesario preparar las variables numéricas y categóricas.
 
-Se aplicaron procedimientos como imputación de valores faltantes, escalado de variables numéricas y codificación de categorías.
+Para preparar las seis variables predictoras numéricas se aplicaron procedimientos de imputación de valores faltantes y escalado. No fue necesario codificar variables categóricas porque estas no se incluyeron en el modelo conservador.
 
 También se consideró el desbalance de clases: 7.827 de los pedidos Gold (8,11 %) corresponden a entregas tardías.
 
@@ -262,6 +262,8 @@ Los cinco factores principales fueron:
 | Valor total del pedido | 0,01603 |
 | Cantidad de artículos | 0,00814 |
 | Día de semana de compra | 0,00311 |
+
+La importancia por permutación permite identificar qué variables contribuyen más a las predicciones, pero no determina por sí sola si aumentar o disminuir sus valores eleva el riesgo de atraso. Para establecer esa dirección sería necesario realizar un análisis adicional de los efectos de cada variable.
 
 La variable con mayor importancia fue `dias_estimados_entrega`, que representa el tiempo entre la compra y la fecha estimada de entrega.
 
