@@ -214,3 +214,70 @@ Se conservará la tabla original de Bronze sin modificaciones. La fila correspon
 - El reporte valida unicidad de `order_id`, cobertura del ranking contra Gold, etiquetas binarias y probabilidades dentro de rango antes de presentar resultados.
 - Se documenta una propuesta de revisión humana y piloto operativo que reconoce el bajo precision y que el ranking corresponde a pedidos históricos del conjunto de prueba.
 - Se documenta la capacidad de revisión como parámetro que operaciones debe definir; no se supone un límite operativo no proporcionado.
+
+
+---
+
+## Avances del 28 de octubre de 2026
+
+### Revisión y actualización del informe ejecutivo
+
+Se revisó el informe ejecutivo del Proyecto 1 de OLIST, enfocado en la clasificación del riesgo de entrega tardía.
+
+Se realizó una nueva redacción para presentar de forma más clara el trabajo desarrollado durante el curso, manteniendo los resultados obtenidos en el proyecto.
+
+El informe incluye:
+
+- Descripción del problema y objetivos.
+- Tablas utilizadas del conjunto de datos OLIST.
+- Procesamiento de información mediante las capas Bronze, Silver y Gold.
+- Validaciones de calidad de los datos.
+- Preparación de variables para la clasificación.
+- Comparación de los modelos utilizados.
+- Resultados de validación y prueba.
+- Matriz de confusión.
+- Análisis de variables importantes.
+- Limitaciones y conclusiones del proyecto.
+
+Se mantuvieron los resultados registrados durante el desarrollo del modelo, sin realizar nuevos entrenamientos.
+
+### Resultados documentados
+
+La tabla Gold contiene 96.476 pedidos, de los cuales 7.827 corresponden a entregas tardías.
+
+Se compararon cuatro modelos:
+
+1. DummyClassifier.
+2. Regresión Logística.
+3. Random Forest.
+4. HistGradientBoosting.
+
+La Regresión Logística presentó el mejor PR-AUC en validación, con un resultado de 0,2076.
+
+En la evaluación final, utilizando un umbral de 0,65, se obtuvieron los siguientes resultados:
+
+- Precision: 9,82 %.
+- Recall: 36,73 %.
+- F1-score: 0,1550.
+- ROC-AUC: 0,7127.
+- PR-AUC: 0,1054.
+
+Estos resultados fueron incorporados al informe junto con su interpretación.
+
+### Actualización del repositorio en GitHub
+
+Se revisaron los cambios pendientes del proyecto en Visual Studio Code.
+
+Se prepararon 12 archivos relacionados con la documentación, los modelos y los resultados obtenidos.
+
+Se realizó el siguiente commit en la rama `main`:
+
+`cb16151 - Agregar informe ejecutivo y resultados finales OLIST`
+
+
+### Estado del proyecto
+
+Al finalizar, los archivos principales seleccionados quedaron actualizados en GitHub.
+
+
+
