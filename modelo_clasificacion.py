@@ -4,8 +4,6 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from gold import gold
-
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
@@ -25,6 +23,17 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 
+BASE = Path(__file__).resolve().parent
+ARCHIVO_GOLD = BASE / "outputs" / "gold_order_delivery_risk_features.csv"
+ARCHIVO_ORDERS_RAW = BASE / "Data" / "Raw" / "olist_orders_dataset.csv"
+VARIABLES_PREDICTORAS = [
+    "cantidad_items",
+    "valor_total",
+    "freight_value",
+    "dia_semana_compra",
+    "mes_compra",
+    "dias_estimados_entrega",
+]
 SEMILLA = 42
 PORCENTAJE_DESARROLLO = 0.80
 PORCENTAJE_ENTRENAMIENTO = 0.80
@@ -122,30 +131,80 @@ def calcular_metricas(y_real, probabilidades, umbral):
 
 
 def main():
-    datos_modelo = gold["order_delivery_risk_features"].copy()
+    if not ARCHIVO_GOLD.is_file():
+        raise FileNotFoundError(
+            f"No se encontro Gold: {ARCHIVO_GOLD}. Ejecute gold.py primero."
+        )
+
+    datos_modelo = pd.read_csv(
+        ARCHIVO_GOLD,
+        dtype={"order_id": "string"},
+        low_memory=False,
+    )
+    if "order_approved_at" not in datos_modelo.columns:
+        if not ARCHIVO_ORDERS_RAW.is_file():
+            raise FileNotFoundError(
+                "Gold no contiene order_approved_at y no se encontro el CSV "
+                f"raw requerido: {ARCHIVO_ORDERS_RAW}"
+            )
+        fechas_aprobacion = pd.read_csv(
+            ARCHIVO_ORDERS_RAW,
+            usecols=["order_id", "order_approved_at"],
+            dtype={"order_id": "string"},
+            low_memory=False,
+        )
+        if fechas_aprobacion["order_id"].duplicated().any():
+            raise ValueError(
+                "El CSV raw de orders contiene order_id duplicados."
+            )
+        filas_gold = len(datos_modelo)
+        datos_modelo = datos_modelo.merge(
+            fechas_aprobacion,
+            on="order_id",
+            how="left",
+            validate="one_to_one",
+        )
+        if len(datos_modelo) != filas_gold:
+            raise ValueError(
+                "La union con las fechas de aprobacion altero la granularidad "
+                "de Gold."
+            )
+
+    columnas_faltantes = sorted(
+        set(VARIABLES_PREDICTORAS) - set(datos_modelo.columns)
+    )
+    if columnas_faltantes:
+        raise ValueError(
+            "Gold no contiene las variables predictoras autorizadas: "
+            + ", ".join(columnas_faltantes)
+        )
+
+    datos_modelo["order_approved_at"] = pd.to_datetime(
+        datos_modelo["order_approved_at"],
+        errors="coerce",
+    )
     datos_modelo["order_purchase_timestamp"] = pd.to_datetime(
         datos_modelo["order_purchase_timestamp"],
         errors="coerce",
     )
     datos_modelo = datos_modelo.dropna(
-        subset=["order_purchase_timestamp", "late_delivery"]
-    ).sort_values("order_purchase_timestamp", kind="mergesort")
-
-    if datos_modelo.empty or datos_modelo["late_delivery"].nunique() != 2:
-        raise ValueError(
-            "Gold debe contener pedidos fechados y ambas clases de late_delivery."
-        )
-
-    X = datos_modelo.drop(
-        columns=[
-            "order_id",
+        subset=[
+            "order_approved_at",
             "order_purchase_timestamp",
             "late_delivery",
         ]
-    )
+    ).sort_values("order_approved_at", kind="mergesort")
+
+    if datos_modelo.empty or datos_modelo["late_delivery"].nunique() != 2:
+        raise ValueError(
+            "Gold debe contener pedidos aprobados y ambas clases de late_delivery."
+        )
+
+    X = datos_modelo[VARIABLES_PREDICTORAS].copy()
     y = datos_modelo["late_delivery"].astype(int)
     order_ids = datos_modelo["order_id"]
     purchase_dates = datos_modelo["order_purchase_timestamp"]
+    approval_dates = datos_modelo["order_approved_at"]
 
     # El ultimo 20 % queda reservado y no participa en seleccion ni ajuste.
     corte_desarrollo = int(len(datos_modelo) * PORCENTAJE_DESARROLLO)
@@ -168,6 +227,7 @@ def main():
 
     ids_test = order_ids.iloc[corte_desarrollo:]
     fechas_test = purchase_dates.iloc[corte_desarrollo:]
+    fechas_aprobacion_test = approval_dates.iloc[corte_desarrollo:]
 
     print("=" * 72)
     print("CLASIFICACION DE RIESGO DE ENTREGA TARDIA")
@@ -179,12 +239,17 @@ def main():
         f"{int(y.sum()):,} ({y.mean():.2%} del conjunto)"
     )
     print(
-        "Division temporal (entrenamiento / validacion / prueba): "
+        "Division cronologica por order_approved_at "
+        "(entrenamiento / validacion / prueba): "
         f"{len(X_train):,} / {len(X_validacion):,} / {len(X_test):,}"
     )
     print(
-        "Fechas de prueba: "
-        f"{fechas_test.min()} a {fechas_test.max()}"
+        "Variables predictoras conservadoras: "
+        + ", ".join(VARIABLES_PREDICTORAS)
+    )
+    print(
+        "Aprobaciones en prueba: "
+        f"{fechas_aprobacion_test.min()} a {fechas_aprobacion_test.max()}"
     )
 
     # Baseline separado: siempre asigna la clase mayoritaria del entrenamiento.
@@ -278,29 +343,19 @@ def main():
         )
 
     modelo_final = candidatos[modelo_elegido]
-    if modelo_elegido != "Regresion Logistica":
-        raise RuntimeError(
-            "El modelo seleccionado no es Regresion Logistica; "
-            "no se guardara un artefacto con ese nombre."
-        )
-
     archivo_modelo = (
-        Path(__file__).resolve().parent
+        BASE
         / "outputs"
-        / "modelo_regresion_logistica_v1.joblib"
+        / "modelo_riesgo_entrega_v1.joblib"
     )
     archivo_modelo.parent.mkdir(parents=True, exist_ok=True)
-
-    if archivo_modelo.exists():
-        raise FileExistsError(
-            f"No se sobrescribira el artefacto existente: {archivo_modelo}"
-        )
 
     joblib.dump(
         {
             "pipeline": modelo_final,
             "umbral": float(umbral_seleccionado),
             "variables_predictoras": X.columns.tolist(),
+            "fecha_referencia_particion": "order_approved_at",
         },
         archivo_modelo,
     )

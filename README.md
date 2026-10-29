@@ -114,18 +114,33 @@ compra y no se usan como predictores del riesgo estimado al confirmar la orden.
 ```bash
 python gold.py
 ```
-Se genera la tabla analítica `order_delivery_risk_features` con una fila por `order_id` y las variables disponibles antes o durante el despacho.
+Se genera la tabla analítica `order_delivery_risk_features` con una fila por
+`order_id`. Incluye `order_approved_at` únicamente como referencia temporal
+para ordenar y dividir los datos; no se usa como predictor. En este proyecto
+la aprobación se usa como aproximación al momento de confirmación, ya que el
+dataset no define por sí mismo ese evento operativo.
 
 ### Paso 4: Modelado y priorización
 ```bash
 python modelo_clasificacion.py
 ```
 Este script:
-- separa los datos en entrenamiento, validación y prueba por temporalidad,
+- usa una lista explícita y conservadora de predictores,
+- separa los datos cronológicamente por `order_approved_at`, que no entra al
+  clasificador,
 - compara modelos base y candidatos,
 - selecciona el mejor modelo por PR-AUC,
 - ajusta un umbral operativo por F1,
 - exporta los pedidos priorizados a `outputs/pedidos_priorizados.csv`.
+
+Los predictores autorizados son `cantidad_items`, `valor_total`,
+`freight_value`, `dia_semana_compra`, `mes_compra` y
+`dias_estimados_entrega`. Se excluyen del clasificador las variables de
+vendedor, cliente, catálogo y geolocalización que no tienen historial temporal
+para demostrar que su valor era conocido al aprobar la orden. El uso del
+contenido/precio/flete del pedido y de la fecha estimada supone que esos datos
+ya estaban disponibles en ese momento; OLIST no permite verificarlo campo por
+campo, por lo que la suposición debe declararse como limitación.
 
 ### Paso 5: Reporte visual y propuesta de acción
 ```bash
@@ -154,8 +169,10 @@ Al ejecutar el pipeline completo, se deben generar las siguientes salidas:
 - `Data/Curated/silver_*.csv`
 - `Data/Curated/silver_manifest.csv`
 - `outputs/gold_order_delivery_risk_features.csv`
+- `outputs/modelo_riesgo_entrega_v1.joblib`
 - `outputs/pedidos_priorizados.csv`
 - `outputs/reporte_riesgo_entrega.html`
+- `resultados_modelo.txt`
 
 ## 8. Reglas de calidad de datos
 El proyecto incorpora validaciones medibles sobre la base de datos, incluyendo al menos las siguientes reglas:
@@ -170,8 +187,14 @@ El proyecto incorpora validaciones medibles sobre la base de datos, incluyendo a
 ## 9. Consideraciones de modelado
 - La variable objetivo es `late_delivery`
 - Se define como 1 cuando la fecha de entrega real supera la fecha estimada
-- Se excluyen variables posteriores a la entrega o que revelen directamente el target
-- La separación de datos se hace por tiempo para evitar fuga de información
+- La fecha real de entrega solo se usa para formar la etiqueta; nunca es predictor
+- El modelo usa una lista explícita de seis predictores y excluye variables de
+  geolocalización agregada, vendedor, cliente y catálogo sin historial temporal
+- La separación cronológica se hace por `order_approved_at`; esta marca se
+  excluye de las variables predictoras
+- Se asume que ítems, precio, flete y fecha estimada están disponibles al
+  aprobar la orden; el dataset no permite comprobar completamente esta
+  disponibilidad histórica
 - El modelo debe evaluarse con métricas técnicas: precision, recall, F1, ROC-AUC y PR-AUC
 
 ## 10. Resultado operativo esperado
@@ -216,4 +239,3 @@ El pipeline completo se ejecuta según este orden:
 `Bronze → Silver → Gold → Modelado → Reporte`
 
 Este orden garantiza que la capa analítica se construya sobre datos validados y no sobre joins improvisados sin control de calidad.
-

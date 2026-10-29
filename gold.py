@@ -94,6 +94,7 @@ base = silver["orders"][
         "customer_id",
         "order_status",
         "order_purchase_timestamp",
+        "order_approved_at",
         "order_estimated_delivery_date",
         "order_delivered_customer_date"
     ]
@@ -254,12 +255,13 @@ print("Pedidos sin fecha de entrega (fuera de Gold):",
 
 print("\nTABLA GOLD ORDER_DELIVERY_RISK_FEATURES:")
 
-# Se excluyen variables posteriores a la entrega:
-# order_delivered_customer_date, order_status y reviews.
-# order_purchase_timestamp se conserva solo para dividir por tiempo.
+# Gold conserva variables descriptivas y auxiliares; el modelo aplica una
+# lista explicita de predictores que excluye campos sin version temporal.
+# Las fechas de compra y aprobacion solo ordenan datos y derivan calendario.
 columnas_gold = [
     "order_id",
     "order_purchase_timestamp",
+    "order_approved_at",
     "cantidad_items",
     "cantidad_vendedores",
     "valor_total",

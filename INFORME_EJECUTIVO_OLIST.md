@@ -6,7 +6,7 @@
 **Curso:** Minería de Datos  
 **Profesor:** Jorge Bermúdez-Tellería  
 **Integrantes:** María José Arauz Retana, Fiorella Paola Chávez Ordóñez y Sebastián Barzuna Garza  
-**Fecha:** 29 de octubre de 2026
+**Fecha:** 28 de octubre de 2026
 
 ---
 
@@ -16,11 +16,11 @@ El presente proyecto tiene como objetivo analizar los pedidos de OLIST para iden
 
 Para desarrollar el proyecto trabajamos con información histórica de comercio electrónico de Brasil. Organizamos los datos en tres capas: Bronze, Silver y Gold. Posteriormente, utilizamos técnicas de clasificación supervisada para comparar diferentes modelos y seleccionar el que presentó mejores resultados durante la validación.
 
-La tabla final contiene 96.476 pedidos, de los cuales 7.827 fueron clasificados como entregas tardías, equivalentes al 8,11 % del total. Se compararon cuatro modelos: DummyClassifier, Regresión Logística, Random Forest e HistGradientBoosting.
+La tabla Gold contiene 96.476 pedidos con etiqueta y 18 columnas. Para el modelo conservador se usaron 96.462 pedidos con fecha de aprobación disponible y seis predictores explícitos; se compararon DummyClassifier, Regresión Logística, Random Forest e HistGradientBoosting.
 
-La Regresión Logística obtuvo el mejor PR-AUC durante la validación, con un resultado de 0,2076. En el conjunto de prueba alcanzó un Recall de 36,73 %, una Precision de 9,82 % y un ROC-AUC de 0,7127.
+HistGradientBoosting obtuvo el mejor PR-AUC de validación (0,1289). En prueba temporal, con umbral 0,15, alcanzó PR-AUC de 0,1251, ROC-AUC de 0,7500, Precision de 18,06 % y Recall de 2,75 %.
 
-Los resultados muestran que el modelo permite identificar una parte de los pedidos que presentan atrasos. Sin embargo, también genera una cantidad considerable de alertas incorrectas. Por esta razón, consideramos que puede servir como base para futuras mejoras y evaluaciones antes de utilizarlo en un proceso operativo real.
+El modelo detectó 28 de los 1.020 atrasos en prueba y generó 155 alertas. El bajo Recall indica que no debe utilizarse operativamente con este umbral; el resultado es una evaluación académica y requiere mejoras.
 
 ## 2. Problema y objetivo del proyecto
 
@@ -65,9 +65,9 @@ Las seis tablas principales utilizadas para construir la información analítica
 
 Estas tablas se relacionaron mediante identificadores para reunir la información necesaria de cada pedido.
 
-El resultado final fue una tabla denominada `order_delivery_risk_features`, con 96.476 registros y 17 columnas.
+El resultado final fue una tabla denominada `order_delivery_risk_features`, con 96.476 registros y 18 columnas. Catorce pedidos con etiqueta no tenían fecha de aprobación y se excluyeron del modelado temporal.
 
-De esas columnas, 14 se utilizaron como variables predictoras. Las restantes corresponden al identificador del pedido, la fecha de compra y la variable objetivo.
+El modelo conservador usa seis predictores: cantidad de ítems, valor total, flete, día y mes de compra y días estimados de entrega. `order_approved_at` se conserva solo para ordenar temporalmente y se excluye de los predictores.
 
 ### 3.1 Variable objetivo
 
@@ -127,21 +127,21 @@ Se calcularon variables relacionadas con:
 - Día y mes de la compra.
 - Días disponibles hasta la fecha estimada de entrega.
 
-La tabla final contiene 96.476 pedidos únicos y constituye la base utilizada para el entrenamiento y evaluación de los modelos.
+La tabla final contiene 96.476 pedidos únicos. El modelado retiene 96.462 pedidos con fecha de aprobación disponible.
 
 ## 5. Metodología de clasificación
 
 Nuestro problema corresponde a una clasificación binaria porque buscamos distinguir entre dos posibles resultados: entrega tardía y entrega no tardía.
 
-Antes de entrenar los modelos, se organizaron los registros cronológicamente utilizando la fecha de compra.
+Antes de entrenar los modelos, se organizaron los registros cronológicamente utilizando `order_approved_at`, que define el momento de predicción. Esta columna se usa solo para ordenar y dividir, no como predictor.
 
 Los datos se dividieron de la siguiente manera:
 
 | Conjunto | Cantidad de pedidos | Propósito |
 |---|---:|---|
-| Entrenamiento | 61.744 | Entrenar los modelos. |
-| Validación | 15.436 | Comparar modelos y seleccionar el umbral. |
-| Prueba | 19.296 | Evaluar el resultado final. |
+| Entrenamiento | 61.735 | Entrenar los modelos. |
+| Validación | 15.434 | Comparar modelos y seleccionar el umbral. |
+| Prueba | 19.293 | Evaluar el resultado final. |
 
 La separación temporal permite evaluar el modelo con pedidos posteriores a los utilizados durante el entrenamiento.
 
@@ -163,7 +163,7 @@ Para entrenar los modelos fue necesario preparar las variables numéricas y cate
 
 Se aplicaron procedimientos como imputación de valores faltantes, escalado de variables numéricas y codificación de categorías.
 
-También se consideró el desbalance de clases, ya que solamente el 8,11 % de los pedidos del conjunto Gold correspondía a entregas tardías.
+También se consideró el desbalance de clases: 7.827 de los pedidos Gold (8,11 %) corresponden a entregas tardías.
 
 ## 6. Comparación de modelos
 
@@ -176,39 +176,39 @@ Los resultados obtenidos fueron:
 | Modelo | PR-AUC en validación |
 |---|---:|
 | DummyClassifier | 0,0810 |
-| Regresión Logística | **0,2076** |
-| Random Forest | 0,1781 |
-| HistGradientBoosting | 0,1860 |
+| Regresión Logística | 0,1165 |
+| Random Forest | 0,1167 |
+| HistGradientBoosting | **0,1289** |
 
-La Regresión Logística presentó el mejor resultado entre los modelos evaluados.
+HistGradientBoosting presentó el mejor resultado entre los modelos evaluados.
 
-Por este motivo fue seleccionada para la evaluación final.
+Por este motivo fue seleccionado para la evaluación final.
 
-Posteriormente se determinó un umbral de clasificación de 0,65, seleccionado a partir de los resultados de F1 en validación.
+El umbral de clasificación seleccionado fue 0,15, al maximizar F1 en validación.
 
 ## 7. Resultados finales
 
-El modelo seleccionado se evaluó con 19.296 pedidos correspondientes al conjunto de prueba temporal.
+El modelo seleccionado se evaluó con 19.293 pedidos correspondientes al conjunto de prueba temporal por fecha de aprobación.
 
 Los resultados fueron los siguientes:
 
 | Métrica | Resultado |
 |---|---:|
-| Precision | 9,82 % |
-| Recall | 36,73 % |
-| F1-score | 0,1550 |
-| Accuracy | 78,80 % |
-| ROC-AUC | 0,7127 |
-| PR-AUC | 0,1054 |
-| Umbral de clasificación | 0,65 |
+| Precision | 18,06 % |
+| Recall | 2,75 % |
+| F1-score | 0,0477 |
+| Accuracy | 94,20 % |
+| ROC-AUC | 0,7500 |
+| PR-AUC | 0,1251 |
+| Umbral de clasificación | 0,15 |
 
 ### 7.1 Interpretación de resultados
 
-La **Precision de 9,82 %** significa que, entre los pedidos identificados como posibles atrasos, aproximadamente uno de cada diez presentó realmente una entrega tardía.
+La **Precision de 18,06 %** significa que, entre los pedidos identificados como posibles atrasos, alrededor de 18 de cada 100 presentaron realmente una entrega tardía.
 
-El **Recall de 36,73 %** indica que el modelo identificó aproximadamente el 37 % de los atrasos reales del conjunto de prueba.
+El **Recall de 2,75 %** indica que el modelo identificó 28 de los 1.020 atrasos reales del conjunto de prueba. A este umbral, el modelo deja sin detectar la mayoría de los pedidos tardíos.
 
-El **ROC-AUC de 0,7127** muestra que el modelo tiene cierta capacidad para diferenciar entre pedidos tardíos y no tardíos.
+El **ROC-AUC de 0,7500** sugiere capacidad para ordenar pedidos por riesgo, pero las métricas de clasificación al umbral elegido muestran que aún no resulta adecuado como alerta operativa.
 
 Estos resultados deben analizarse en conjunto, ya que una sola métrica no permite determinar completamente el desempeño del modelo.
 
@@ -218,36 +218,36 @@ La matriz de confusión permitió identificar la cantidad de predicciones correc
 
 | Resultado real | Predicción sin atraso | Predicción con atraso |
 |---|---:|---:|
-| Sin atraso | 14.831 | 3.444 |
-| Con atraso | 646 | 375 |
+| Sin atraso | 18.146 | 127 |
+| Con atraso | 992 | 28 |
 
 De acuerdo con estos resultados:
 
-- Se identificaron correctamente 375 pedidos que presentaron atraso.
-- Se generaron 3.444 alertas de pedidos que finalmente no se atrasaron.
-- No se detectaron 646 pedidos que sí presentaron atraso.
-- Se clasificaron correctamente 14.831 pedidos sin atraso.
+- Se identificaron correctamente 28 pedidos que presentaron atraso.
+- Se generaron 127 alertas de pedidos que finalmente no se atrasaron.
+- No se detectaron 992 pedidos que sí presentaron atraso.
+- Se clasificaron correctamente 18.146 pedidos sin atraso.
 
-En total, el modelo generó 3.819 alertas de posible entrega tardía.
+En total, el modelo generó 155 alertas de posible entrega tardía.
 
 Esto demuestra que, aunque el modelo logra identificar algunos pedidos de riesgo, todavía presenta dificultades para distinguir correctamente entre pedidos tardíos y no tardíos.
 
 ### 7.3 Comparación de umbrales
 
-También se analizaron los resultados con umbrales de 0,50 y 0,65.
+Se comparó el umbral seleccionado de 0,15 con 0,05, que permite recuperar más atrasos, y con 0,50.
 
-| Indicador | Umbral 0,50 | Umbral 0,65 |
-|---|---:|---:|
-| Precision | 8,78 % | 9,82 % |
-| Recall | 81,68 % | 36,73 % |
-| F1 | 0,1585 | 0,1550 |
-| Alertas generadas | 9.500 | 3.819 |
+| Indicador | Umbral 0,05 | Umbral 0,15 | Umbral 0,50 |
+|---|---:|---:|---:|
+| Precision | 9,44 % | 18,06 % | 0,00 % |
+| Recall | 80,88 % | 2,75 % | 0,00 % |
+| F1 | 0,1690 | 0,0477 | 0,0000 |
+| Alertas generadas | 8.744 | 155 | 0 |
 
-Con el umbral de 0,50 se identificaron más atrasos, pero también aumentó considerablemente la cantidad de alertas.
+Con el umbral 0,05 se recuperan más atrasos, pero se generan 8.744 alertas, lo que puede ser inviable operativamente.
 
-El umbral de 0,65 redujo el volumen de alertas, aunque dejó más atrasos sin detectar.
+El umbral 0,15 reduce las alertas a 155, pero deja sin detectar 992 de los 1.020 atrasos. En prueba, el umbral 0,50 no produce alertas.
 
-El umbral seleccionado durante la validación fue 0,65. Sin embargo, para una aplicación real sería necesario considerar la capacidad de revisión de pedidos y las consecuencias de las predicciones incorrectas.
+El umbral se eligió en validación, sin consultar prueba. La caída de Recall en prueba señala una diferencia temporal de desempeño y la necesidad de investigar estabilidad y utilidad antes de cualquier uso operativo.
 
 ## 8. Variables con mayor importancia
 
@@ -257,15 +257,15 @@ Los cinco factores principales fueron:
 
 | Variable | Importancia registrada |
 |---|---:|
-| Días estimados de entrega | 0,05851 |
-| Estado de destino | 0,00369 |
-| Valor total del pedido | 0,00363 |
-| Cantidad de artículos | 0,00333 |
-| Cantidad de vendedores | 0,00249 |
+| Días estimados de entrega | 0,07636 |
+| Costo del envío | 0,01697 |
+| Valor total del pedido | 0,01603 |
+| Cantidad de artículos | 0,00814 |
+| Día de semana de compra | 0,00311 |
 
 La variable con mayor importancia fue `dias_estimados_entrega`, que representa el tiempo entre la compra y la fecha estimada de entrega.
 
-También se identificó un aporte predictivo de la ubicación de destino y de algunas características del pedido.
+Los resultados corresponden únicamente a los seis predictores autorizados del modelo conservador. La importancia negativa de `mes_compra` indica que no mejoró el PR-AUC en esta permutación.
 
 Estos resultados permiten conocer qué información utiliza el modelo para diferenciar los pedidos, pero no demuestran que estas variables sean la causa directa de los atrasos.
 
@@ -289,7 +289,7 @@ En primer lugar, los datos utilizados corresponden a pedidos históricos realiza
 
 Otra limitación es el desbalance de clases, debido a que las entregas tardías representan una proporción pequeña del total.
 
-Además, aunque se excluyeron las fechas reales de entrega de las variables predictoras, todavía sería necesario confirmar que todas las variables utilizadas estén disponibles exactamente en el momento de confirmar una compra. Esta verificación es importante para evitar el uso de información que solo se conoce posteriormente.
+Se aproximó el instante de predicción con la aprobación de la orden y se excluyeron como predictores vendedor, cliente, catálogo y geolocalización cuya disponibilidad histórica no puede verificarse. Se asume que ítems, precio, flete y fecha estimada ya se conocen al aprobarla. OLIST no incluye marcas de tiempo por campo, así que esta disponibilidad sigue siendo una limitación; la ausencia total de fuga no puede demostrarse con estos datos.
 
 Finalmente, el proyecto se evaluó con datos históricos. No se realizó una implementación en producción ni se comprobó una reducción real de atrasos mediante acciones preventivas.
 
@@ -299,13 +299,13 @@ Estas limitaciones permiten identificar oportunidades de mejora para futuras eta
 
 El desarrollo de este proyecto nos permitió aplicar diferentes conocimientos adquiridos durante el curso de Minería de Datos, desde la preparación de información hasta la evaluación de modelos predictivos.
 
-Mediante las capas Bronze, Silver y Gold logramos organizar los datos de OLIST y construir una tabla analítica de 96.476 pedidos, con las variables necesarias para realizar la clasificación.
+Mediante las capas Bronze, Silver y Gold organizamos los datos de OLIST y construimos una tabla analítica de 96.476 pedidos. Para modelar se usaron 96.462 pedidos con fecha de aprobación disponible y seis predictores explícitos.
 
-La comparación de modelos permitió identificar que la Regresión Logística obtuvo el mejor PR-AUC durante la validación, con un resultado de 0,2076.
+La comparación de modelos permitió identificar que HistGradientBoosting obtuvo el mejor PR-AUC de validación, con 0,1289.
 
-En la evaluación final, el modelo alcanzó un Recall de 36,73 % y una Precision de 9,82 %. Esto indica que existe capacidad para detectar parte de los atrasos, pero también una cantidad importante de predicciones incorrectas.
+En prueba, con umbral 0,15, el modelo alcanzó Recall de 2,75 % y Precision de 18,06 %. Recuperó pocos atrasos; por tanto, el resultado no sustenta un despliegue operativo.
 
-El análisis de variables mostró que los días estimados de entrega fueron el factor con mayor aporte predictivo entre los evaluados.
+El análisis de permutación mostró que los días estimados de entrega fueron el factor con mayor aporte predictivo entre los seis predictores autorizados.
 
 Consideramos que el proyecto cumple su propósito académico de construir, comparar y evaluar modelos de clasificación utilizando datos reales. Al mismo tiempo, los resultados muestran que se requieren mejoras y nuevas evaluaciones antes de considerar una implementación operativa.
 
