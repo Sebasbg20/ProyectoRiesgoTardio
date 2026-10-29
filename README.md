@@ -14,6 +14,12 @@ El flujo del proyecto se estructura en tres capas principales:
 - Silver: limpieza, tipificación, validación de calidad y consistencia; los duplicados se detectan y se conservan para no modificar datos fuente sin justificación.
 - Gold: tabla analítica nivel orden, lista para modelado.
 
+> **Conclusión vigente:** el modelo no está listo para uso operativo. El umbral
+> 0,15 se eligió maximizando F1 en validación, pero en prueba temporal el
+> Recall fue 2,75 %: detectó 28 de 1.020 atrasos y generó 155 alertas. El
+> ranking es retrospectivo; no debe interpretarse como una lista de pedidos
+> activos ni usarse para automatizar acciones.
+
 ## 2. Objetivo del negocio
 Identificar, al momento de confirmar una orden, qué pedidos presentan alto riesgo de entregarse después de la fecha estimada. Este resultado permite priorizar intervención operativa, mejorar la experiencia del cliente y reducir la tasa de entregas tardías.
 
@@ -130,7 +136,7 @@ Este script:
   clasificador,
 - compara modelos base y candidatos,
 - selecciona el mejor modelo por PR-AUC,
-- ajusta un umbral operativo por F1,
+- selecciona un umbral de clasificación por F1 en validación,
 - exporta los pedidos priorizados a `outputs/pedidos_priorizados.csv`.
 
 Los predictores autorizados son `cantidad_items`, `valor_total`,
@@ -169,10 +175,40 @@ Al ejecutar el pipeline completo, se deben generar las siguientes salidas:
 - `Data/Curated/silver_*.csv`
 - `Data/Curated/silver_manifest.csv`
 - `outputs/gold_order_delivery_risk_features.csv`
-- `outputs/modelo_riesgo_entrega_v1.joblib`
+- `outputs/modelo_clasificacion_v1.joblib`
 - `outputs/pedidos_priorizados.csv`
 - `outputs/reporte_riesgo_entrega.html`
-- `resultados_modelo.txt`
+
+El script actual guarda el modelo como `modelo_clasificacion_v1.joblib`. Si
+`modelo_riesgo_entrega_v1.joblib` permanece en `outputs/`, esta secuencia no
+lo actualiza; no debe confundirse con el artefacto de la corrida vigente.
+
+### Resultado vigente y decisión
+
+La corrida completa del 28 de octubre de 2026 seleccionó HistGradientBoosting
+por su PR-AUC de validación (0,1289) y eligió el umbral 0,15 maximizando F1 en
+validación. En los 19.293 pedidos de prueba, el resultado fue:
+
+| Métrica en prueba | Resultado |
+|---|---:|
+| Recall | 2,75 % |
+| Precision | 18,06 % |
+| F1 | 0,0477 |
+| PR-AUC | 0,1251 |
+| ROC-AUC | 0,7500 |
+
+Con ese umbral se detectaron 28 de los 1.020 atrasos y se emitieron 155
+alertas. La caída del Recall entre validación y prueba temporal no justifica
+una implementación operativa. Se requiere investigar la estabilidad temporal
+y mejorar el modelo antes de proponer un piloto; cualquier evaluación futura
+debe mantener revisión humana y medir falsas alarmas y atrasos no detectados.
+
+La corrida ejecutada regeneró Gold, el ranking y el reporte HTML en secuencia.
+`reporte_riesgo.py` comprueba la unicidad y cobertura del ranking contra Gold
+antes de producir el reporte. El archivo `resultados_modelo.txt` que pueda
+existir en el repositorio no lo genera `modelo_clasificacion.py`; no se debe
+usar como evidencia de la corrida vigente. Los resultados reproducibles se
+obtienen en la salida de consola y en el reporte HTML.
 
 ## 8. Reglas de calidad de datos
 El proyecto incorpora validaciones medibles sobre la base de datos, incluyendo al menos las siguientes reglas:
@@ -197,8 +233,11 @@ El proyecto incorpora validaciones medibles sobre la base de datos, incluyendo a
   disponibilidad histórica
 - El modelo debe evaluarse con métricas técnicas: precision, recall, F1, ROC-AUC y PR-AUC
 
-## 10. Resultado operativo esperado
-La salida del modelo no es solo una métrica técnica, sino una priorización de órdenes con mayor riesgo de retraso. Esto permite a una operación logística:
+## 10. Uso futuro sujeto a revalidación
+La priorización podría apoyar una operación logística si una versión futura
+demuestra utilidad en datos recientes. El resultado actual no justifica usar
+las alertas en operaciones. Si el desempeño mejora y se autoriza un piloto, el
+equipo podría:
 - revisar pedidos de alto riesgo antes del despacho,
 - coordinar acciones preventivas con vendedores o logística,
 - reducir devoluciones operativas y mejorar la experiencia del cliente.
@@ -239,3 +278,23 @@ El pipeline completo se ejecuta según este orden:
 `Bronze → Silver → Gold → Modelado → Reporte`
 
 Este orden garantiza que la capa analítica se construya sobre datos validados y no sobre joins improvisados sin control de calidad.
+
+Ejecute los cinco comandos desde la raíz del repositorio y en este orden:
+
+```bash
+python bronze_carga_completa.py
+python silver.py
+python gold.py
+python modelo_clasificacion.py
+python reporte_riesgo.py
+```
+
+La carga Bronze crea las tablas que falten y omite las existentes; el flujo
+requiere SQL Server local, la base `olist` y el driver ODBC documentados arriba.
+Compruebe que Gold, `pedidos_priorizados.csv` y el reporte HTML se regeneraron
+en la misma corrida. El reporte se construye a partir del Gold y del ranking
+recién generado y valida su correspondencia.
+
+`OLIST_Analisis_y_Modelado.ipynb` es material complementario y no sustituye
+esta secuencia como evidencia reproducible. No se debe presentar como notebook
+completamente ejecutado hasta ejecutar y revisar todas sus celdas.

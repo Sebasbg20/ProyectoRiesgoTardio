@@ -6,7 +6,6 @@ Maria José Arauz Retana
 Fiorella Paola Chavez Ordoñez 
 Sebastian Barzuna Garza.
 
-
 ---
 
 ## Versión 0.1
@@ -158,8 +157,13 @@ Se conservará la tabla original de Bronze sin modificaciones. La fila correspon
 - `silver.py` ahora ejecuta estas reglas al finalizar, imprime los valores observados y detiene la ejecución con error si una transformación o una restricción de consistencia falla.
 - Las anomalías de origen (por ejemplo, fechas cronológicas y diferencias de conciliación) se informan como resultados medibles, sin confundirse con errores de transformación ni eliminarse automáticamente.
 
-## Versión 0.9 — Selección y evaluación temporal del modelo
+## Versión 0.9 — Selección y evaluación temporal del modelo (histórica)
 **Fecha:** 27 de octubre de 2026
+
+> **Registro histórico, no vigente.** Esta ejecución seleccionó Regresión
+> Logística y umbral 0,65. Sus resultados se conservan como trazabilidad y
+> fueron supersedidos por la versión 1.4; no deben citarse como resultado
+> final del proyecto.
 
 ### Cambios
 - Se añadió un baseline separado `DummyClassifier` y se comparan regresión logística, Random Forest e HistGradientBoosting usando una partición cronológica de entrenamiento, validación y prueba.
@@ -218,9 +222,13 @@ Se conservará la tabla original de Bronze sin modificaciones. La fila correspon
 
 ---
 
-## Avances del 28 de octubre de 2026
+## Avances del 28 de octubre de 2026 — registro histórico supersedido
 
 ### Revisión y actualización del informe ejecutivo
+
+> **Este resumen corresponde a una versión anterior.** La selección de
+> Regresión Logística, umbral 0,65 y sus métricas ya no describen el modelo
+> vigente. La referencia actual está en la versión 1.4.
 
 Se revisó el informe ejecutivo del Proyecto 1 de OLIST, enfocado en la clasificación del riesgo de entrega tardía.
 
@@ -277,7 +285,38 @@ Se realizó el siguiente commit en la rama `main`:
 
 ### Estado del proyecto
 
-Al finalizar, los archivos principales seleccionados quedaron actualizados en GitHub.
+Al finalizar aquella revisión, los archivos principales seleccionados quedaron actualizados en GitHub. Este estado no representa los resultados vigentes.
 
+## Versión 1.4 — Ejecución integral y resultados vigentes
+**Fecha:** 28 de octubre de 2026
 
+### Ejecución reproducible
+- Se ejecutó el flujo completo en orden: `bronze_carga_completa.py`,
+  `silver.py`, `gold.py`, `modelo_clasificacion.py` y `reporte_riesgo.py`.
+- La conexión local a SQL Server `olist` respondió correctamente. Bronze
+  omitió las nueve tablas raw que ya existían.
+- Silver finalizó sus controles y persistió los CSV curados; Gold, el modelo,
+  el ranking y el reporte se generaron sin errores.
+- Gold contiene 96.476 pedidos etiquetados; el modelado temporal utilizó
+  96.462 pedidos con fecha de aprobación y produjo 61.735 registros de
+  entrenamiento, 15.434 de validación y 19.293 de prueba.
+- Los archivos Gold, ranking y reporte HTML se regeneraron en esta misma
+  ejecución. El reporte validó la unicidad y cobertura del ranking contra Gold.
+
+### Resultados vigentes
+- HistGradientBoosting obtuvo el mejor PR-AUC en validación: 0,1289. Se
+  seleccionó el umbral 0,15 maximizando F1 en validación (F1 0,1935).
+- En prueba temporal: Recall 2,75 %, Precision 18,06 %, F1 0,0477,
+  PR-AUC 0,1251 y ROC-AUC 0,7500.
+- De los 1.020 atrasos reales en prueba, se detectaron 28; se emitieron
+  155 alertas, 127 de ellas falsas alarmas.
+- **Conclusión:** el umbral fue seleccionado sin consultar prueba, pero la
+  caída de Recall en la evaluación temporal significa que el modelo no
+  justifica una implementación operativa. Los resultados son retrospectivos;
+  no son pedidos activos y no autorizan automatizar acciones.
+- El script guarda el artefacto del modelo en
+  `outputs/modelo_clasificacion_v1.joblib`. `resultados_modelo.txt` no se
+  genera en el flujo actual y no debe usarse como registro de esta ejecución.
+- El notebook `OLIST_Analisis_y_Modelado.ipynb` no se ejecutó por completo; la
+  secuencia de scripts es la evidencia reproducible del proyecto.
 
